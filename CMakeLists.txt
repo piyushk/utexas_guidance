@@ -1,0 +1,87 @@
+cmake_minimum_required(VERSION 2.6)
+project(utexas_planning)
+
+find_package(Qt4 REQUIRED)
+SET(QT_USE_QTXML 1)
+SET(QT_USE_QTOPENGL 1)
+INCLUDE(${QT_USE_FILE})
+
+list(APPEND CMAKE_MODULE_PATH ${utexas_planning_SOURCE_DIR}/cmake_modules)
+find_package(QGLViewer REQUIRED)
+include_directories(${QGLViewer_INCLUDE_DIRS})
+
+find_package(Boost REQUIRED) # COMPONENTS filesystem program_options serialization system)
+include_directories(${Boost_INCLUDE_DIRS})
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAML_CPP REQUIRED yaml-cpp>=0.5)
+pkg_check_modules(CLASS_LOADER REQUIRED class_loader)
+
+find_library(YAML_CPP_LIBRARY NAMES yaml-cpp
+  HINTS ${YAML_CPP_LIBDIR} ${YAML_CPP_LIBRARY_DIRS}
+)
+include_directories(${YAML_CPP_INCLUDE_DIRS})
+
+## find_library(CLASS_LOADER_LIBRARY NAMES class_loader
+##   HINTS ${CLASS_LOADER_LIBDIR} ${CLASS_LOADER_LIBRARY_DIRS}
+## )
+##
+## find_package(Eigen3 REQUIRED)
+
+# http://igorbarbosa.com/articles/how-to-use-opengl-freeglut-and-cmake/
+
+#########################################################
+# FIND OPENGL
+#########################################################
+find_package(OpenGL REQUIRED)
+include_directories(${OpenGL_INCLUDE_DIRS})
+link_directories(${OpenGL_LIBRARY_DIRS})
+add_definitions(${OpenGL_DEFINITIONS})
+if(NOT OPENGL_FOUND)
+  message(ERROR " OPENGL not found!")
+endif(NOT OPENGL_FOUND)
+
+## include_directories(${EIGEN3_INCLUDE_DIR})
+## include_directories(${CLASS_LOADER_INCLUDE_DIRS})
+
+include_directories(include)
+
+add_library(graph
+  src/graph/graph.cpp
+)
+target_link_libraries(graph
+  ${Boost_LIBRARIES}
+  ${YAML_CPP_LIBRARY}
+  ${QGLVIEWER_LIBRARY}
+  ${QT_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+)
+
+add_executable(graph_viewer
+  src/visualizer/graph_viewer.cpp
+)
+target_link_libraries(graph_viewer
+  graph
+  ${QGLVIEWER_LIBRARY}
+  ${QT_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+)
+
+add_executable(main
+  src/test/animation.cpp
+  src/test/main.cpp
+)
+target_link_libraries(main
+  ${QGLVIEWER_LIBRARY}
+  ${QT_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+)
+
+install(
+  TARGETS
+    graph
+    main
+  ARCHIVE DESTINATION bin
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
