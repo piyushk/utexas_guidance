@@ -1,3 +1,6 @@
+# Taken from https://github.com/RainerKuemmerle/g2o/blob/master/cmake_modules/FindQGLViewer.cmake
+# Licensed under Modified BSD
+
 # Need to find both Qt{4,5} and QGLViewer if the QQL support is to be built
 FIND_PACKAGE(Qt4 COMPONENTS QtCore QtXml QtOpenGL QtGui)
 IF(NOT Qt4_FOUND)
