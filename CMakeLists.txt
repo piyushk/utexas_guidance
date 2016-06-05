@@ -6,21 +6,31 @@ SET(QT_USE_QTXML 1)
 SET(QT_USE_QTOPENGL 1)
 INCLUDE(${QT_USE_FILE})
 
-list(APPEND CMAKE_MODULE_PATH ${utexas_planning_SOURCE_DIR}/cmake_modules)
-find_package(QGLViewer REQUIRED)
-include_directories(${QGLViewer_INCLUDE_DIRS})
-
 find_package(Boost REQUIRED) # COMPONENTS filesystem program_options serialization system)
 include_directories(${Boost_INCLUDE_DIRS})
 
 find_package(PkgConfig REQUIRED)
-pkg_check_modules(YAML_CPP REQUIRED yaml-cpp>=0.5)
-pkg_check_modules(CLASS_LOADER REQUIRED class_loader)
+pkg_check_modules(UTEXAS_PLANNING REQUIRED utexas_planning)
+include_directories(${UTEXAS_PLANNING_INCLUDE_DIRS})
+link_directories(${UTEXAS_PLANNING_LIBRARY_DIRS})
 
-find_library(YAML_CPP_LIBRARY NAMES yaml-cpp
-  HINTS ${YAML_CPP_LIBDIR} ${YAML_CPP_LIBRARY_DIRS}
-)
-include_directories(${YAML_CPP_INCLUDE_DIRS})
+## foreach(library utexas_planning_common utexas_planning_core utexas_planning_planners utexas_planning_execution) 
+##   find_library(UTEXAS_PLANNING_LIBRARY NAMES ${library}
+##     HINTS ${UTEXAS_PLANNING_LIBDIR} ${UTEXAS_PLANNING_LIBRARY_DIRS}
+##   )
+##   list (APPEND UTEXAS_PLANNING_LIBRARIES ${UTEXAS_PLANNING_LIBRARY})
+## endforeach()
+
+pkg_check_modules(YAML_CPP REQUIRED yaml-cpp>=0.5)
+link_directories(${YAML_CPP_LIBRARY_DIRS})
+## find_library(YAML_CP_LIBRARY NAMES yaml-cpp
+##   HINTS ${YAML_CPP_LIBDIR} ${YAML_CPP_LIBRARY_DIRS}
+## )
+message(test ${YAML_CPP_LIBRARIES})
+
+list(APPEND CMAKE_MODULE_PATH ${utexas_planning_SOURCE_DIR}/cmake_modules)
+find_package(QGLViewer REQUIRED)
+include_directories(${QGLViewer_INCLUDE_DIRS})
 
 ## find_library(CLASS_LOADER_LIBRARY NAMES class_loader
 ##   HINTS ${CLASS_LOADER_LIBDIR} ${CLASS_LOADER_LIBRARY_DIRS}
@@ -46,12 +56,20 @@ endif(NOT OPENGL_FOUND)
 
 include_directories(include)
 
+add_library(mdp
+  src/mdp/structures.cpp
+)
+target_link_libraries(mdp
+  ${UTEXAS_PLANNING_LIBRARIES}
+  ${Boost_LIBRARIES}
+)
+
 add_library(graph
   src/graph/graph.cpp
 )
 target_link_libraries(graph
   ${Boost_LIBRARIES}
-  ${YAML_CPP_LIBRARY}
+  ${YAML_CPP_LIBRARIES}
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
