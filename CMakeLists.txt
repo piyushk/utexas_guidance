@@ -57,6 +57,7 @@ endif(NOT OPENGL_FOUND)
 include_directories(include)
 
 add_library(mdp
+  src/mdp/extended_structures.cpp
   src/mdp/structures.cpp
 )
 target_link_libraries(mdp

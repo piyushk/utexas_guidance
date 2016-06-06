@@ -38,11 +38,11 @@ namespace utexas_guidance {
       virtual void serialize(std::ostream& stream) const;
       virtual std::string getName() const;
 
-    private:
-
       ActionType type;
       int robot_id; // with ASSIGN_ROBOT, identifies the robot
       int node; // with DIRECT_PERSON or LEAD_PERSON, identifies the direction the robot should guide/lead to.
+
+    private:
 
       friend class boost::serialization::access;
       template<class Archive> void serialize(Archive& ar, const unsigned int version) {
@@ -97,6 +97,8 @@ namespace utexas_guidance {
   std::size_t hash_value(const RequestState &rq);
 
   class State : public utexas_planning::State {
+
+  public:
 
     typedef boost::shared_ptr<State> Ptr;
     typedef boost::shared_ptr<const State> ConstPtr;

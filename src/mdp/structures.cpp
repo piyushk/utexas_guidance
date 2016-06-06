@@ -49,7 +49,7 @@ namespace utexas_guidance {
   };
 
   std::size_t Action::hash() const {
-    size_t seed = 0;
+    std::size_t seed = 0;
     boost::hash_combine(seed, type);
     boost::hash_combine(seed, robot_id);
     boost::hash_combine(seed, node);
@@ -65,6 +65,10 @@ namespace utexas_guidance {
       }
     }
     stream << "]";
+  }
+
+  std::string Action::getName() const {
+    return std::string("utexas_guidance::Action");
   }
 
   /* RobotState */
@@ -103,8 +107,8 @@ namespace utexas_guidance {
     return stream;
   }
 
-  size_t hash_value(const RobotState &rs) {
-    size_t seed = 0;
+  std::size_t hash_value(const RobotState &rs) {
+    std::size_t seed = 0;
     boost::hash_combine(seed, rs.loc_u);
     boost::hash_combine(seed, rs.loc_v);
     boost::hash_combine(seed, rs.loc_p);
@@ -143,8 +147,8 @@ namespace utexas_guidance {
     return stream;
   }
 
-  size_t hash_value(const RequestState &rs) {
-    size_t seed = 0;
+  std::size_t hash_value(const RequestState &rs) {
+    std::size_t seed = 0;
     boost::hash_combine(seed, rs.loc_node);
     boost::hash_combine(seed, rs.loc_prev);
     boost::hash_combine(seed, rs.assist_type);
@@ -153,6 +157,8 @@ namespace utexas_guidance {
   }
 
   /* State */
+
+  State::~State() {}
 
   bool State::operator<(const utexas_planning::State& other_base) const {
     try {                                                                                                                
@@ -192,9 +198,9 @@ namespace utexas_guidance {
   }
 
   std::size_t State::hash() const {
-    size_t seed = 0;
-    boost::hash_combine(seed, boost::hash_range(robots.begin(), robots.end()));
-    boost::hash_combine(seed, boost::hash_range(requests.begin(), requests.end()));
+    std::size_t seed = 0;
+    boost::hash_range(seed, robots.begin(), robots.end());
+    boost::hash_range(seed, requests.begin(), requests.end());
     return seed;
   }
 
@@ -208,6 +214,17 @@ namespace utexas_guidance {
       stream << robots[i] << ", ";
     }
     stream << "]";
+  }
+
+  std::string State::getName() const {
+    return std::string("utexas_guidance::State");
+  }
+
+  utexas_planning::State::Ptr State::cloneImpl() const {
+    State::Ptr clone(new State);
+    clone->requests = requests;
+    clone->robots = robots;
+    return clone;
   }
 
 } /* utexas_guidance */
