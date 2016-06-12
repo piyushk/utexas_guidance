@@ -180,13 +180,13 @@ namespace utexas_guidance {
   MotionModel::MotionModel(const bwi_mapper::Graph graph,
                            float avg_robot_speed,
                            float avg_human_speed,
-                           float avg_elevator_speed,
-                           float avg_elevator_speed_with_robot) :
+                           float avg_human_elevator_speed,
+                           float avg_robot_elevator_speed) :
       graph_(graph),
       robot_speed_(avg_robot_speed),
       human_speed_(avg_human_speed),
-      elevator_speed_(avg_elevator_speed),
-      elevator_speed_with_robot_(avg_elevator_speed_with_robot) {
+      elevator_human_speed_(avg_human_elevator_speed),
+      elevator_robot_speed_(avg_robot_elevator_speed) {
     computeShortestPath(shortest_distances_, shortest_paths_, graph_);
   }
 
@@ -196,170 +196,171 @@ namespace utexas_guidance {
    * \brief  Given a human decision model, as well as a task generation model, move the system state forwards in time
    *         until a human reaches a decision point. This function is called when the Wait action is used.
    */
-  bool MotionModel::move(State& state,
+  void MotionModel::move(State& state,
                     const HumanDecisionModel::ConstPtr& human_decision_model,
                     const TaskGenerationModel::ConstPtr& task_generation_model,
                     RNG &rng,
-                    float &total_time,
-                    const bwi_mapper::Graph& graph) {
+                    float &total_time) {
 
-        total_time = std::numeric_limits<float>::max();
-        std::vector<float> human_speeds(state.requests.size());
+    total_time = std::numeric_limits<float>::max();
+    std::vector<float> human_speeds(state.requests.size());
 
-        /* First compute new human locations for humans that have exactly reached a particular graph node. */
-        for (int i = 0; i < state.requests.size(); ++i) {
-          RequestState& rs = state.requests[i];
-          if (rs.loc_p == 1.0f) {
-            // Choose the next node for this person
-            rs.loc_p = 0.0f;
-            rs.loc_prev = rs.loc_node;
-            rs.loc_node = human_decision_model->getNextNode(rs, rng);
-          }
+    /* First compute new human locations for humans that have exactly reached a particular graph node. */
+    for (int i = 0; i < state.requests.size(); ++i) {
+      RequestState& rs = state.requests[i];
+      if (rs.loc_p == 1.0f) {
+        // Choose the next node for this person
+        rs.loc_p = 0.0f;
+        rs.loc_prev = rs.loc_node;
+        rs.loc_node = human_decision_model->getNextNode(rs, rng);
+      }
 
-          // Figure out what pace the human is gonna move in.
-          if (!onSameFloor(rs.loc_prev, rs.loc_node, graph_)) {
-            human_speeds[i] = (rs.assist_type == LEAD_PERSON) ? elevator_speed_with_robot_ : elevator_speed_;
+      // Figure out what pace the human is gonna move in.
+      if (!onSameFloor(rs.loc_prev, rs.loc_node, graph_)) {
+        human_speeds[i] = (rs.assist_type == LEAD_PERSON) ? elevator_robot_speed_ : elevator_human_speed_;
+      } else {
+        human_speeds[i] = (rs.assist_type == LEAD_PERSON) ? robot_speed_ : human_speed_;
+      }
+
+      float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speed;
+      total_time = std::min(total_time, time_to_dest);
+    }
+
+    /* total_time now reflects when the first human is going to reach a destination node. Increment all humans by
+     * this time. */
+    for (int i = 0; i < state.requests.size(); ++i) {
+      RequestState& rs = state.requests[i];
+      float distance_covered = total_time * human_speeds[i];
+      rs.loc_p += distance_covered / shortest_distances_[rs.loc_node][next_node]; // Should be atmost 1.
+
+      // Atleast one of the following should be 1, but no real need to check that.
+      if (rs.loc_p > 1.0f - 1e-6f) {
+        rs.loc_p == 1.0f;
+        rs.assist_type = NONE;
+        rs.assist_loc = NONE;
+      }
+    }
+
+    /* Move all robots using total_time.*/
+
+    // Optimized!!!
+    for (int i = 0; i < state.robots.size(); ++i) {
+      RobotState& robot = state.robots[i];
+
+      float robot_time_remaining = total_time;
+      bool robot_in_use = robot.help_destination != NONE;
+      int destination = (robot_in_use) ? robot.help_destination : robot.tau_d;
+
+      // Get shortest path to destination, and figure out how much distance
+      // of that path we can cover
+      while (robot_time_remaining > 0.0f) {
+
+        /* std::cout << robot.graph_id << " " << robot.precision << " " << destination << " " << robot.other_graph_node << std::endl; */
+        // Check if the robot has already reached it's destination.
+        if (isRobotExactlyAt(robot, destination)) {
+          if (robot_in_use) {
+            // Won't be doing anything more with this robot until the robot gets released.
+            robot_time_remaining = 0.0f;
           } else {
-            human_speeds[i] = (rs.assist_type == LEAD_PERSON) ? robot_speed_ : human_speed_;
-          }
+            // The robot has reached its service task destination and is in the middle of performing the service
+            // task.
+            robot.tau_t += robot_time_remaining;
+            robot_time_remaining = 0.0f;
 
-          float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speed;
-          total_time = std::min(total_time, time_to_dest);
-        }
-
-        /* total_time now reflects when the first human is going to reach a destination node. Increment all humans by
-         * this time. */
-        for (int i = 0; i < state.requests.size(); ++i) {
-          RequestState& rs = state.requests[i];
-          float distance_covered = total_time * human_speeds[i];
-          rs.loc_p += distance_covered / shortest_distances_[rs.loc_node][next_node]; // Should be atmost 1.
-
-          // Atleast one of the following should be 1, but no real need to check that.
-          if (rs.loc_p > 1.0f - 1e-6f) {
-            rs.loc_p == 1.0f;
-            rs.assist_type = NONE;
-            rs.assist_loc = NONE;
-          }
-        }
-
-        /* Move all robots using total_time.*/
-
-        // Optimized!!!
-        for (int i = 0; i < state.robots.size(); ++i) {
-          RobotState& robot = state.robots[i];
-
-          float robot_time_remaining = total_time;
-          bool robot_in_use = robot.help_destination != NONE;
-          int destination = (robot_in_use) ? robot.help_destination : robot.tau_d;
-
-          // Get shortest path to destination, and figure out how much distance
-          // of that path we can cover
-          while (robot_time_remaining > 0.0f) {
-
-            /* std::cout << robot.graph_id << " " << robot.precision << " " << destination << " " << robot.other_graph_node << std::endl; */
-            // Check if the robot has already reached it's destination.
-            if (isRobotExactlyAt(robot, destination)) {
-              if (robot_in_use) {
-                // Won't be doing anything more with this robot until the robot gets released.
-                robot_time_remaining = 0.0f;
-              } else {
-                // The robot has reached its service task destination and is in the middle of performing the service
-                // task.
-                robot.tau_t += robot_time_remaining;
-                robot_time_remaining = 0.0f;
-
-                // Check if the robot can complete this task and move on to the next task.
-                if (robot.tau_t > robot.tau_total_task_time) {
-                  robot_time_remaining = robot.tau_t - robot.tau_total_task_time;
-                  task_generation_model->generateNewTaskForRobot(i, robot, rng);
-                  // Update the destination for this robot.
-                  destination = robot.tau_d;
-                }
-              }
-            } else {
-
-              // Just in case the robot is exactly at v, let's switch the position around so that the robot is
-              // exactly at u.
-              if (isRobotExactlyAt(robot, robot.loc_v)) {
-                robot.loc_u = robot.loc_v;
-                robot.loc_p = 0.0f;
-              }
-
-              // If the robot is exactly at u, then compute the shortest path to the goal and move the robot along
-              // this shortest path.
-              if (isRobotExactlyAt(robot, robot.loc_u)) {
-                // Move robot along shortest path from u.
-                std::vector<size_t>& shortest_path = shortest_paths_[robot.loc_u][destination];
-                robot.loc_v = shortest_path[0];
-                robot.loc_p += (robot_time_remaining * robot_speed_) / shortest_distances_[robot.loc_u][robot.loc_v];
-                robot_time_remaining = 0.0f;
-                if (robot.loc_p > 1.0f) {
-                  robot_time_remaining =
-                    ((robot.loc_p - 1.0f) * (shortest_distances_[robot.loc_u][robot.loc_v])) / robot_speed_;
-                  robot.loc_p = 1.0f;
-                }
-              } else {
-                // The robot is somewhere in the middle of u and v.
-                bool shortest_path_through_u = isShortestPathThroughLocU(robot.loc_u,
-                                                                         robot.loc_v,
-                                                                         robot.loc_p,
-                                                                         destination,
-                                                                         shortest_distances_);
-
-                if (shortest_path_through_u) {
-                  // Move robot to u.
-                  robot.loc_p -= (robot_time_remaining * robot_speed_) / shortest_distances_[robot.loc_u][robot.loc_v];
-                  robot_time_remaining = 0.0f;
-                  if (robot.loc_p < 0.0f) {
-                    robot_time_remaining =
-                      ((-robot.loc_p) * (shortest_distances_[robot.loc_u][robot.loc_v])) / robot_speed_;
-                    robot.loc_p = 0.0f;
-                  }
-                } else {
-                  // Move robot to v.
-                  robot.loc_p += (robot_time_remaining * robot_speed_) / shortest_distances_[robot.loc_u][robot.loc_v];
-                  robot_time_remaining = 0.0f;
-                  if (robot.loc_p > 1.0f) {
-                    robot_time_remaining =
-                      ((robot.loc_p - 1.0f) * (shortest_distances_[robot.loc_u][robot.loc_v])) / robot_speed_;
-                    robot.loc_p = 1.0f;
-                  }
-                }
-              }
+            // Check if the robot can complete this task and move on to the next task.
+            if (robot.tau_t > robot.tau_total_task_time) {
+              robot_time_remaining = robot.tau_t - robot.tau_total_task_time;
+              task_generation_model->generateNewTaskForRobot(i, robot, rng);
+              // Update the destination for this robot.
+              destination = robot.tau_d;
             }
           }
+        } else {
 
-          // Account for any floating point errors, especially while leading a person.
-          if (robot.loc_p > 1.0f - 1e-6f) {
-            robot.loc_p = 1.0f;
-          }
-
-          if (robot.loc_p < 1e-6f) {
+          // Just in case the robot is exactly at v, let's switch the position around so that the robot is
+          // exactly at u.
+          if (isRobotExactlyAt(robot, robot.loc_v)) {
+            robot.loc_u = robot.loc_v;
             robot.loc_p = 0.0f;
           }
 
+          // If the robot is exactly at u, then compute the shortest path to the goal and move the robot along
+          // this shortest path.
+          if (isRobotExactlyAt(robot, robot.loc_u)) {
+            // Move robot along shortest path from u.
+            std::vector<size_t>& shortest_path = shortest_paths_[robot.loc_u][destination];
+            robot.loc_v = shortest_path[0];
+            bool in_elevator = !onSameFloor(robot.loc_u, robot.loc_v);
+            float robot_speed = (in_elevator) ? elevator_robot_speed_ : robot_speed_;
+            robot.loc_p += (robot_time_remaining * robot_speed) / shortest_distances_[robot.loc_u][robot.loc_v];
+            robot_time_remaining = 0.0f;
+            if (robot.loc_p > 1.0f) {
+              robot_time_remaining =
+                ((robot.loc_p - 1.0f) * (shortest_distances_[robot.loc_u][robot.loc_v])) / robot_speed;
+              robot.loc_p = 1.0f;
+            }
+          } else {
+            // The robot is somewhere in the middle of u and v.
+            bool shortest_path_through_u = isShortestPathThroughLocU(robot.loc_u,
+                                                                     robot.loc_v,
+                                                                     robot.loc_p,
+                                                                     destination,
+                                                                     shortest_distances_);
+
+            bool in_elevator = !onSameFloor(robot.loc_u, robot.loc_v);
+            float robot_speed = (in_elevator) ? elevator_robot_speed_ : robot_speed_;
+
+            if (shortest_path_through_u) {
+              // Move robot to u.
+              robot.loc_p -= (robot_time_remaining * robot_speed) / shortest_distances_[robot.loc_u][robot.loc_v];
+              robot_time_remaining = 0.0f;
+              if (robot.loc_p < 0.0f) {
+                robot_time_remaining =
+                  ((-robot.loc_p) * (shortest_distances_[robot.loc_u][robot.loc_v])) / robot_speed;
+                robot.loc_p = 0.0f;
+              }
+            } else {
+              // Move robot to v.
+              robot.loc_p += (robot_time_remaining * robot_speed) / shortest_distances_[robot.loc_u][robot.loc_v];
+              robot_time_remaining = 0.0f;
+              if (robot.loc_p > 1.0f) {
+                robot_time_remaining =
+                  ((robot.loc_p - 1.0f) * (shortest_distances_[robot.loc_u][robot.loc_v])) / robot_speed;
+                robot.loc_p = 1.0f;
+              }
+            }
+          }
         }
-
-        return ready_for_next_action;
       }
 
-      virtual float getHumanSpeed() {
-        return human_speed_;
+      // Account for any floating point errors, especially while leading a person.
+      if (robot.loc_p > 1.0f - 1e-6f) {
+        robot.loc_p = 1.0f;
       }
 
-      virtual float getRobotSpeed() {
-        return robot_speed_;
+      if (robot.loc_p < 1e-6f) {
+        robot.loc_p = 0.0f;
       }
 
-    private:
+    }
 
-      bwi_mapper::Graph graph_;
-      std::vector<std::vector<std::vector<size_t> > > shortest_paths_;
-      std::vector<std::vector<float> > shortest_distances_;
+  }
 
-      float robot_speed_;
-      float human_speed_;
+  float MotionModel::getHumanSpeed() {
+    return human_speed_;
+  }
 
-  };
+  float MotionModel::getHumanSpeedInElevator() {
+    return elevator_human_speed_;
+  }
+
+  float MotionModel::getRobotSpeed() {
+    return robot_speed_;
+  }
+
+  float MotionModel::getRobotSpeedInElevator() {
+    return elevator_robot_speed_;
+  }
+
 
 } /* bwi_guidance */

@@ -109,7 +109,8 @@ namespace utexas_guidance {
       MotionModel(const utexas_guidance::Graph graph,
                   float avg_robot_speed,
                   float avg_human_speed,
-                  float avg_elevator_speed);
+                  float avg_elevator_speed,
+                  float avg_robot_elevator_speed);
 
       virtual ~MotionModel();
       virtual bool move(State &state,
@@ -120,6 +121,8 @@ namespace utexas_guidance {
 
       virtual float getHumanSpeed();
       virtual float getRobotSpeed();
+      virtual float getHumanElevatorSpeed();
+      virtual float getRobotElevatorSpeed();
 
     private:
 
@@ -129,7 +132,8 @@ namespace utexas_guidance {
 
       float robot_speed_;
       float human_speed_;
-      float elevator_speed_;
+      float elevator_human_speed_;
+      float elevator_robot_speed_;
 
   };
 
