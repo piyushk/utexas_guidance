@@ -14,7 +14,7 @@ namespace utexas_guidance {
 
   class HumanDecisionModel {
 
-    public: 
+    public:
 
       typedef boost::shared_ptr<HumanDecisionModel> Ptr;
       typedef boost::shared_ptr<const HumanDecisionModel> ConstPtr;
@@ -22,12 +22,13 @@ namespace utexas_guidance {
       HumanDecisionModel(const utexas_guidance::Graph graph, float decision_variance_multiplier = 1.0f);
       virtual ~HumanDecisionModel();
 
-      virtual int getNextNode(const State &state, RNG &rng);
+      virtual int getNextNode(const RequestState& state, RNG &rng);
 
     private:
 
       utexas_guidance::Graph graph_;
       std::map<int, std::vector<int> > adjacent_vertices_map_;
+      std::map<int, std::vector<int> > adjacent_vertices_on_same_floor_map_;
       float decision_variance_multiplier_;
 
   };
@@ -44,29 +45,6 @@ namespace utexas_guidance {
 
   };
 
-  class FixedTaskGenerationModel : public TaskGenerationModel {
-
-    public:
-
-      typedef boost::shared_ptr<FixedTaskGenerationModel> Ptr;
-      typedef boost::shared_ptr<FixedTaskGenerationModel> ConstPtr;
-
-      FixedTaskGenerationModel(const std::string& task_file,
-                               float task_utility);
-      virtual ~TaskGenerationModel();
-
-      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng);
-
-    private:
-
-      std::vector<int> robot_home_base_;
-      std::vector<std::vector<std::vector<int> > > goals_by_distance_;
-
-      float task_utility_;
-      bool home_base_only_;
-
-  };
-
   class RandomTaskGenerationModel : public TaskGenerationModel {
 
     public:
@@ -77,6 +55,7 @@ namespace utexas_guidance {
       RandomTaskGenerationModel(const std::vector<int> robot_home_base,
                                 const utexas_guidance::Graph &graph,
                                 float task_utility,
+                                float task_time,
                                 bool home_base_only = false);
       virtual ~TaskGenerationModel();
 
@@ -84,13 +63,39 @@ namespace utexas_guidance {
 
     private:
 
-      void cacheNewGoalsByDistance(const utexas_guidance::Graph &graph);
+      void cacheNewGoalsByDistance(const utexas_guidance::Graph& graph);
 
       std::vector<int> robot_home_base_;
       std::vector<std::vector<std::vector<int> > > goals_by_distance_;
 
       float task_utility_;
+      float task_time_;
       bool home_base_only_;
+
+  };
+
+  class FixedTaskGenerationModel : public TaskGenerationModel {
+
+    public:
+
+      typedef boost::shared_ptr<FixedTaskGenerationModel> Ptr;
+      typedef boost::shared_ptr<FixedTaskGenerationModel> ConstPtr;
+
+      FixedTaskGenerationModel(const std::string& task_file,
+                               float task_utility,
+                               float task_time);
+      virtual ~TaskGenerationModel();
+
+      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng);
+
+    private:
+
+      void readFixedTasksFiles(const std::string& task_file);
+
+      std::vector<std::vector<int> > tasks_;
+
+      float task_utility_;
+      float task_time_;
 
   };
 
@@ -101,7 +106,10 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<MotionModel> Ptr;
       typedef boost::shared_ptr<const MotionModel> ConstPtr;
 
-      MotionModel(const utexas_guidance::Graph graph, float avg_robot_speed, float avg_human_speed);
+      MotionModel(const utexas_guidance::Graph graph,
+                  float avg_robot_speed,
+                  float avg_human_speed,
+                  float avg_elevator_speed);
 
       virtual ~MotionModel();
       virtual bool move(State &state,
@@ -121,6 +129,7 @@ namespace utexas_guidance {
 
       float robot_speed_;
       float human_speed_;
+      float elevator_speed_;
 
   };
 

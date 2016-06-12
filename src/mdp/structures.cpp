@@ -16,21 +16,21 @@ namespace utexas_guidance {
   Action::~Action() {}
 
   bool Action::operator<(const utexas_planning::Action& other_base) const {
-    try {                                                                                                                
-      const Action& other = dynamic_cast<const Action&>(other_base);                                             
+    try {
+      const Action& other = dynamic_cast<const Action&>(other_base);
       return ((type < other.type) ||
               ((type == other.type) && (robot_id < other.robot_id)) ||
               ((type == other.type) && (robot_id == other.robot_id) && (node < other.node)));
-    } catch(const std::bad_cast& exp) {                                                                                  
+    } catch(const std::bad_cast& exp) {
       throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
     }
   }
 
   bool Action::operator==(const utexas_planning::Action& other_base) const {
-    try {                                                                                                                
-      const Action& other = dynamic_cast<const Action&>(other_base);                                             
+    try {
+      const Action& other = dynamic_cast<const Action&>(other_base);
       return ((type == other.type) && (robot_id == other.robot_id) && (node == other.node));
-    } catch(const std::bad_cast& exp) {                                                                                  
+    } catch(const std::bad_cast& exp) {
       throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
     }
   }
@@ -86,9 +86,9 @@ namespace utexas_guidance {
   }
 
   bool operator==(const RobotState& l, const RobotState& r) {
-    return ((l.loc_u == r.loc_u) && 
+    return ((l.loc_u == r.loc_u) &&
             (l.loc_v == r.loc_v) &&
-            (l.loc_p == r.loc_p) && 
+            (l.loc_p == r.loc_p) &&
             (l.tau_d == r.tau_d) &&
             (l.tau_t == r.tau_t) &&
             (l.tau_total_task_time == r.tau_total_task_time) &&
@@ -101,7 +101,7 @@ namespace utexas_guidance {
   }
 
   std::ostream& operator<<(std::ostream& stream, const RobotState& rs) {
-    stream << "[(" << rs.loc_u << "," << rs.loc_v << "," << rs.loc_p << "), (" <<
+    stream << "[(" << rs.loc_u << "->" << rs.loc_v << "," << rs.loc_p << "), (" <<
       rs.tau_d << "," <<  rs.tau_t << "," << rs.tau_total_task_time << "," << rs.tau_u << "), " <<
       rs.help_destination << "]";
     return stream;
@@ -123,15 +123,17 @@ namespace utexas_guidance {
   /* RequestState */
 
   bool operator==(const RequestState& l, const RequestState& r) {
-    return ((l.loc_node == r.loc_node) && 
+    return ((l.loc_node == r.loc_node) &&
             (l.loc_prev == r.loc_prev) &&
-            (l.assist_type == r.assist_type) && 
+            (l.loc_p == r.loc_p) &&
+            (l.assist_type == r.assist_type) &&
             (l.assist_loc == r.assist_loc));
   }
 
   bool operator<(const RequestState& l, const RequestState& r) {
     COMPARE(loc_node);
     COMPARE(loc_prev);
+    COMPARE(loc_p);
     COMPARE(assist_type);
     COMPARE(assist_loc);
     return false;
@@ -142,7 +144,7 @@ namespace utexas_guidance {
   }
 
   std::ostream& operator<<(std::ostream& stream, const RequestState& rs) {
-    stream << "(<" << rs.loc_node << "," << rs.loc_prev << ">, " <<
+    stream << "(<" << rs.loc_prev << "->" << rs.loc_node << ","  << rs.loc_p << ">, " <<
       "<"  << rs.assist_type << "," << rs.assist_loc << ">)";
     return stream;
   }
@@ -151,6 +153,7 @@ namespace utexas_guidance {
     std::size_t seed = 0;
     boost::hash_combine(seed, rs.loc_node);
     boost::hash_combine(seed, rs.loc_prev);
+    boost::hash_combine(seed, rs.loc_p);
     boost::hash_combine(seed, rs.assist_type);
     boost::hash_combine(seed, rs.assist_loc);
     return seed;
@@ -161,8 +164,8 @@ namespace utexas_guidance {
   State::~State() {}
 
   bool State::operator<(const utexas_planning::State& other_base) const {
-    try {                                                                                                                
-      const State& other = dynamic_cast<const State&>(other_base);                                             
+    try {
+      const State& other = dynamic_cast<const State&>(other_base);
 
       // Compare requests size.
       COMPARE_MEMBER(requests.size());
@@ -179,16 +182,16 @@ namespace utexas_guidance {
       }
 
       return false;
-    } catch(const std::bad_cast& exp) {                                                                                  
+    } catch(const std::bad_cast& exp) {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
   }
 
   bool State::operator==(const utexas_planning::State& other_base) const {
-    try {                                                                                                                
-      const State& other = dynamic_cast<const State&>(other_base);                                             
+    try {
+      const State& other = dynamic_cast<const State&>(other_base);
       return (requests == other.requests) && (robots == other.robots);
-    } catch(const std::bad_cast& exp) {                                                                                  
+    } catch(const std::bad_cast& exp) {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
   }

@@ -82,8 +82,9 @@ namespace utexas_guidance {
 
   struct RequestState {
 
-    int loc_node;
     int loc_prev;
+    int loc_node;
+    float loc_p; // Identifies distance traveled by person from loc_prev to loc_node. If 1.0f, then exactly at loc_node.
 
     int assist_type;
     int assist_loc;
