@@ -1,16 +1,17 @@
 #include <utexas_guidance/mdp/transition_model.h>
+#include <utexas_guidance/exceptions.h>
 
 namespace utexas_guidance {
 
-  HumanDecisionModel::HumanDecisionModel(const Graph& graph, float decision_variance_multiplier = 1.0f) :
+  HumanDecisionModel::HumanDecisionModel(const Graph& graph, float decision_variance_multiplier) :
       graph_(graph), decision_variance_multiplier_(decision_variance_multiplier) {
-    computeAdjacentVertices(adjacent_vertices_map_, graph_);
-    computeAdjacentVerticesOnSameFloor(adjacent_vertices_on_same_floor_map_, graph_);
+    getAllAdjacentVertices(adjacent_vertices_map_, graph_);
+    getAllAdjacentVerticesOnSameFloor(adjacent_vertices_on_same_floor_map_, graph_);
   }
 
-  ~HumanDecisionModel::HumanDecisionModel() {}
+  HumanDecisionModel::~HumanDecisionModel() {}
 
-  int HumanDecisionModel::getNextNode(const RequestState& state, RNG &rng) {
+  int HumanDecisionModel::getNextNode(const RequestState& state, RNG &rng) const {
 
     // In case no help has been provided to the human, the expected direction of motion can be given by.
     float expected_direction_of_motion;
@@ -33,14 +34,14 @@ namespace utexas_guidance {
         // This can only mean that this is the start state (as the person does not have loc_prev set), and the policy
         // called Wait without first calling LEAD or DIRECT, which is a terrible action since some free help went to
         // waste. Assume that the person will move completely randomly (including changing floors).
-        int rand_idx = rng.randomInt(adjacent_vertices_map_[state.loc_node].size() - 1);
-        return adjacent_vertices_map_[state.loc_node][rand_idx];
+        int rand_idx = rng.randomInt(adjacent_vertices_map_.find(state.loc_node)->second.size() - 1);
+        return adjacent_vertices_map_.find(state.loc_node)->second[rand_idx];
       } else if (!onSameFloor(state.loc_prev, state.loc_node, graph_)) {
         // The person changed floors, but no assistance was provided after changing floors, the person will likely
         // go anywhere, apart from going back into the elevator.
 
-        int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_[state.loc_node].size() - 1);
-        return adjacent_vertices_on_same_floor_map_[state.loc_node][rand_idx];
+        int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second.size() - 1);
+        return adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second[rand_idx];
       } else {
         expected_direction_of_motion = getNodeAngle(state.loc_prev, state.loc_node, graph_);
         expected_variance = 0.1f * decision_variance_multiplier_;
@@ -50,7 +51,7 @@ namespace utexas_guidance {
     // Now assume that the person moves to one the adjacent locations
     float weight_sum = 0;
     std::vector<float> weights;
-    BOOST_FOREACH(int adj, adjacent_vertices_on_same_floor_map_[state.loc_node]) {
+    BOOST_FOREACH(int adj, adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second) {
       float next_state_direction = getNodeAngle(state.loc_node, adj, graph_);
       float angle_difference = getAbsoluteAngleDifference(next_state_direction, expected_direction_of_motion);
 
@@ -77,7 +78,7 @@ namespace utexas_guidance {
       //   ": " << probability << std::endl;
     }
 
-    return adjacent_vertices_on_same_floor_map_[state.loc_node][rng.select(probabilities)];
+    return adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second[rng.select(probabilities)];
   }
 
   TaskGenerationModel::~TaskGenerationModel() {}
@@ -97,7 +98,7 @@ namespace utexas_guidance {
 
   RandomTaskGenerationModel::~RandomTaskGenerationModel() {}
 
-  void RandomTaskGenerationModel::generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) {
+  void RandomTaskGenerationModel::generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) const {
     // Optimized!!!
     if (home_base_only_) {
       robot.tau_d = robot_home_base_[robot_id];
@@ -107,7 +108,7 @@ namespace utexas_guidance {
       while(graph_distance >= goals_by_distance_[idx].size()) {
         graph_distance = rng.poissonInt(1);
       }
-      std::vector<int>& possible_goals = goals_by_distance_[idx][graph_distance];
+      const std::vector<int>& possible_goals = goals_by_distance_[idx][graph_distance];
       robot.tau_d = *(possible_goals.begin() + rng.randomInt(possible_goals.size() - 1));
     }
     robot.tau_t = 0.0f;
@@ -119,7 +120,7 @@ namespace utexas_guidance {
 
     // Select a random goal on the same floor.
     std::map<int, std::vector<int> > adjacent_vertices_map;
-    computeAdjacentVerticesOnSameFloor(adjacent_vertices_map, graph);
+    getAllAdjacentVerticesOnSameFloor(adjacent_vertices_map, graph);
     int num_vertices = boost::num_vertices(graph);
 
     goals_by_distance_.clear();
@@ -148,15 +149,15 @@ namespace utexas_guidance {
   FixedTaskGenerationModel::FixedTaskGenerationModel(const std::string& task_file,
                                                      float task_utility,
                                                      float task_time) :
-      task_utility_(task_utility), task_time_ {
+      task_utility_(task_utility), task_time_(task_time) {
     readFixedTasksFiles(task_file);
   }
 
-  ~FixedTaskGenerationModel::FixedTaskGenerationModel() {}
+  FixedTaskGenerationModel::~FixedTaskGenerationModel() {}
 
-  void FixedTaskGenerationModel::generateNewTaskForRobot(int robot_id, RobotState& robot, RNG& ) {
+  void FixedTaskGenerationModel::generateNewTaskForRobot(int robot_id, RobotState& robot, RNG& ) const {
     // Optimized!!!
-    if (robot.tau_d == TASK_UNINITIALIZED) {
+    if (robot.tau_d == NONE) {
       robot.tau_d = tasks_[robot_id][0];
     } else {
       bool task_found = false;
@@ -169,7 +170,7 @@ namespace utexas_guidance {
         }
       }
       if (!task_found) {
-        throw utexas_guidance::IncorrectUsageException("Robot assigned task outside specified list in " +
+        throw utexas_guidance::IncorrectUsageException("Robot assigned task outside specified list in "
                                                        "FixedGenerationTaskModel. Cannot assign new task!");
       }
     }
@@ -189,10 +190,10 @@ namespace utexas_guidance {
       human_speed_(avg_human_speed),
       elevator_human_speed_(avg_human_elevator_speed),
       elevator_robot_speed_(avg_robot_elevator_speed) {
-    computeShortestPath(shortest_distances_, shortest_paths_, graph_);
+    getAllShortestPaths(shortest_distances_, shortest_paths_, graph_);
   }
 
-  ~MotionModel::MotionModel() {}
+  MotionModel::~MotionModel() {}
 
   /**
    * \brief  Given a human decision model, as well as a task generation model, move the system state forwards in time
@@ -202,7 +203,7 @@ namespace utexas_guidance {
                     const HumanDecisionModel::ConstPtr& human_decision_model,
                     const TaskGenerationModel::ConstPtr& task_generation_model,
                     RNG &rng,
-                    float &total_time) {
+                    float &total_time) const {
 
     total_time = std::numeric_limits<float>::max();
     std::vector<float> human_speeds(state.requests.size());
@@ -224,7 +225,7 @@ namespace utexas_guidance {
         human_speeds[i] = (rs.assist_type == LEAD_PERSON) ? robot_speed_ : human_speed_;
       }
 
-      float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speed;
+      float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speeds[i];
       total_time = std::min(total_time, time_to_dest);
     }
 
@@ -233,7 +234,7 @@ namespace utexas_guidance {
     for (int i = 0; i < state.requests.size(); ++i) {
       RequestState& rs = state.requests[i];
       float distance_covered = total_time * human_speeds[i];
-      rs.loc_p += distance_covered / shortest_distances_[rs.loc_node][next_node]; // Should be atmost 1.
+      rs.loc_p += distance_covered / shortest_distances_[rs.loc_prev][rs.loc_node]; // Should be atmost 1.
 
       // Atleast one of the following should be 1, but no real need to check that.
       if (rs.loc_p > 1.0f - 1e-6f) {
@@ -290,9 +291,9 @@ namespace utexas_guidance {
           // this shortest path.
           if (isRobotExactlyAt(robot, robot.loc_u)) {
             // Move robot along shortest path from u.
-            std::vector<size_t>& shortest_path = shortest_paths_[robot.loc_u][destination];
+            const std::vector<int>& shortest_path = shortest_paths_[robot.loc_u][destination];
             robot.loc_v = shortest_path[0];
-            bool in_elevator = !onSameFloor(robot.loc_u, robot.loc_v);
+            bool in_elevator = !onSameFloor(robot.loc_u, robot.loc_v, graph_);
             float robot_speed = (in_elevator) ? elevator_robot_speed_ : robot_speed_;
             robot.loc_p += (robot_time_remaining * robot_speed) / shortest_distances_[robot.loc_u][robot.loc_v];
             robot_time_remaining = 0.0f;
@@ -309,7 +310,7 @@ namespace utexas_guidance {
                                                                      destination,
                                                                      shortest_distances_);
 
-            bool in_elevator = !onSameFloor(robot.loc_u, robot.loc_v);
+            bool in_elevator = !onSameFloor(robot.loc_u, robot.loc_v, graph_);
             float robot_speed = (in_elevator) ? elevator_robot_speed_ : robot_speed_;
 
             if (shortest_path_through_u) {

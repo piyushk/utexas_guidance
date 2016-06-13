@@ -39,6 +39,10 @@ namespace utexas_guidance {
 
   float getNodeAngle(int u, int v, const Graph &graph);
 
+  float getAbsoluteAngleDifference(float angle1, float angle2);
+
+  bool onSameFloor(int idx1, int idx2, const Graph& graph);
+
   float getEuclideanDistance(int u, int v, const Graph &graph);
 
   float getShortestPathWithDistance(int start_idx,
@@ -48,7 +52,19 @@ namespace utexas_guidance {
 
   float getShortestPathDistance(int start_idx, int goal_idx, const Graph &graph);
 
-  void getAdjacentNodes(int v, const Graph& graph, std::vector<int>& adjacent_vertices);
+  void getAllShortestPaths(std::vector<std::vector<float> > &shortest_distances,
+                           std::vector<std::vector<std::vector<int> > > &shortest_paths,
+                           const Graph& graph);
+
+  void getAdjacentVertices(int v, const Graph& graph, std::vector<int>& adjacent_vertices);
+
+  void getAdjacentVerticesOnSameFloor(int v, const Graph& graph, std::vector<int>& adjacent_vertices);
+
+  void getAllAdjacentVertices(std::map<int, std::vector<int> >& adjacent_vertices_map, 
+                              const Graph& graph);
+
+  void getAllAdjacentVerticesOnSameFloor(std::map<int, std::vector<int> >& adjacent_vertices_map, 
+                                         const Graph& graph);
 
   void draw(const Graph& graph,
             bool put_all_edges = true,

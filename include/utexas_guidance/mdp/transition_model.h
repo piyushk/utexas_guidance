@@ -8,6 +8,7 @@
 // #include <utexas_guidance/mrn/common.h>
 
 #include <utexas_guidance/graph/graph.h>
+#include <utexas_guidance/mdp/common.h>
 #include <utexas_guidance/mdp/structures.h>
 
 #include <utexas_planning/common/rng.h>
@@ -21,10 +22,10 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<HumanDecisionModel> Ptr;
       typedef boost::shared_ptr<const HumanDecisionModel> ConstPtr;
 
-      HumanDecisionModel(const utexas_guidance::Graph graph, float decision_variance_multiplier = 1.0f);
+      HumanDecisionModel(const utexas_guidance::Graph& graph, float decision_variance_multiplier = 1.0f);
       virtual ~HumanDecisionModel();
 
-      virtual int getNextNode(const RequestState& state, RNG &rng);
+      virtual int getNextNode(const RequestState& state, RNG &rng) const;
 
     private:
 
@@ -43,7 +44,7 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<TaskGenerationModel> ConstPtr;
 
       virtual ~TaskGenerationModel();
-      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) = 0;
+      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) const = 0;
 
   };
 
@@ -61,7 +62,7 @@ namespace utexas_guidance {
                                 bool home_base_only = false);
       virtual ~RandomTaskGenerationModel();
 
-      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng);
+      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) const;
 
     private:
 
@@ -88,7 +89,7 @@ namespace utexas_guidance {
                                float task_time);
       virtual ~FixedTaskGenerationModel();
 
-      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng);
+      virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) const;
 
     private:
 
@@ -115,21 +116,21 @@ namespace utexas_guidance {
                   float avg_robot_elevator_speed);
 
       virtual ~MotionModel();
-      virtual bool move(State &state,
-                        int next_node,
-                        const TaskGenerationModel::Ptr &task_generation_model,
+      virtual void move(State &state,
+                        const HumanDecisionModel::ConstPtr& human_decision_model,
+                        const TaskGenerationModel::ConstPtr& task_generation_model,
                         RNG &rng,
-                        float &total_time);
+                        float &total_time) const;
 
       virtual float getHumanSpeed();
       virtual float getRobotSpeed();
-      virtual float getHumanElevatorSpeed();
-      virtual float getRobotElevatorSpeed();
+      virtual float getHumanSpeedInElevator();
+      virtual float getRobotSpeedInElevator();
 
     private:
 
       utexas_guidance::Graph graph_;
-      std::vector<std::vector<std::vector<size_t> > > shortest_paths_;
+      std::vector<std::vector<std::vector<int> > > shortest_paths_;
       std::vector<std::vector<float> > shortest_distances_;
 
       float robot_speed_;

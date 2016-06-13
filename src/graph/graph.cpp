@@ -18,7 +18,7 @@ namespace utexas_guidance {
       Point3f location = graph[*vi].location;
       // Draw the edges from this vertex
       std::vector<int> adj_vertices;
-      getAdjacentNodes(count, graph, adj_vertices);
+      getAdjacentVertices(count, graph, adj_vertices);
       BOOST_FOREACH(int adj_vtx, adj_vertices) {
         if (adj_vtx > count) {
           bool allow_edge = put_all_edges;
@@ -277,6 +277,18 @@ namespace utexas_guidance {
         graph[vd_v].location.get<0>() - graph[vd_u].location.get<0>());
   }
 
+  bool onSameFloor(int idx1, int idx2, const Graph& graph) {
+    Point3f loc1 = getLocationFromGraphId(idx1, graph);
+    Point3f loc2 = getLocationFromGraphId(idx1, graph);
+    return loc1.get<2>() != loc2.get<2>();
+  }
+
+  float getAbsoluteAngleDifference(float angle1, float angle2) {
+    while (angle2 > angle1 + M_PI) angle2 -= 2 * M_PI;
+    while (angle2 <= angle1 - M_PI) angle2 += 2 * M_PI;
+    return fabs (angle1 - angle2);
+  }
+
   float getEuclideanDistance(int u, int v, const Graph& graph) {
     Graph::vertex_descriptor vd_u = boost::vertex(u, graph);
     Graph::vertex_descriptor vd_v = boost::vertex(v, graph);
@@ -327,13 +339,50 @@ namespace utexas_guidance {
     return getShortestPathWithDistance(start_idx, goal_idx, temp_path, graph);
   }
 
-  void getAdjacentNodes(int graph_id, const Graph& graph, std::vector<int>& adjacent_vertices) {
+  void getAllShortestPaths(std::vector<std::vector<float> > &shortest_distances,
+                           std::vector<std::vector<std::vector<int> > > &shortest_paths,
+                           const Graph& graph) {
+
+    int num_vertices = boost::num_vertices(graph);
+    shortest_paths.resize(num_vertices);
+    shortest_distances.resize(num_vertices);
+
+    for (int idx = 0; idx < num_vertices; ++idx) {
+      shortest_distances[idx].resize(num_vertices);
+      shortest_paths[idx].resize(num_vertices);
+      for (int j = 0; j < num_vertices; ++j) {
+        if (j == idx) {
+          shortest_distances[idx][j] = 0;
+          shortest_paths[idx][j].clear();
+        } else {
+          shortest_distances[idx][j] = 
+            getShortestPathWithDistance(idx, j, shortest_paths[idx][j], graph);
+          // Post-process the shortest path - add goal, remove start and reverse
+          shortest_paths[idx][j].insert(shortest_paths[idx][j].begin(), j); // Add j
+          shortest_paths[idx][j].pop_back(); // Remove idx
+          std::reverse(shortest_paths[idx][j].begin(), shortest_paths[idx][j].end());
+        }
+      }
+    }
+  }
+  
+  void getAdjacentVertices(int graph_id, const Graph& graph, std::vector<int>& adjacent_vertices) {
     adjacent_vertices.clear();
     boost::property_map<Graph, boost::vertex_index_t>::type indexmap = boost::get(boost::vertex_index, graph);
     Graph::vertex_descriptor vertex = boost::vertex(graph_id, graph);
     Graph::adjacency_iterator ai, aend;
     for (boost::tie(ai, aend) = boost::adjacent_vertices(vertex, graph); ai != aend; ++ai) {
       adjacent_vertices.push_back(indexmap[*ai]);
+    }
+  }
+
+  void getAllAdjacentVertices(std::map<int, std::vector<int> >& adjacent_vertices_map,
+                              const Graph& graph) {
+    adjacent_vertices_map.clear();
+    for (int graph_id = 0; graph_id < boost::num_vertices(graph); ++graph_id) {
+      std::vector<int> adjacent_vertices;
+      getAdjacentVertices(graph_id, graph, adjacent_vertices); 
+      adjacent_vertices_map[graph_id] = std::vector<int>(adjacent_vertices.begin(), adjacent_vertices.end());
     }
   }
 
