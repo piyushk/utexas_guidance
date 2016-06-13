@@ -14,7 +14,7 @@ pkg_check_modules(UTEXAS_PLANNING REQUIRED utexas_planning)
 include_directories(${UTEXAS_PLANNING_INCLUDE_DIRS})
 link_directories(${UTEXAS_PLANNING_LIBRARY_DIRS})
 
-## foreach(library utexas_planning_common utexas_planning_core utexas_planning_planners utexas_planning_execution) 
+## foreach(library utexas_planning_common utexas_planning_core utexas_planning_planners utexas_planning_execution)
 ##   find_library(UTEXAS_PLANNING_LIBRARY NAMES ${library}
 ##     HINTS ${UTEXAS_PLANNING_LIBDIR} ${UTEXAS_PLANNING_LIBRARY_DIRS}
 ##   )
@@ -26,7 +26,6 @@ link_directories(${YAML_CPP_LIBRARY_DIRS})
 ## find_library(YAML_CP_LIBRARY NAMES yaml-cpp
 ##   HINTS ${YAML_CPP_LIBDIR} ${YAML_CPP_LIBRARY_DIRS}
 ## )
-message(test ${YAML_CPP_LIBRARIES})
 
 list(APPEND CMAKE_MODULE_PATH ${utexas_planning_SOURCE_DIR}/cmake_modules)
 find_package(QGLViewer REQUIRED)
@@ -59,6 +58,7 @@ include_directories(include)
 add_library(mdp
   src/mdp/extended_structures.cpp
   src/mdp/structures.cpp
+  src/mdp/transition_model.cpp
 )
 target_link_libraries(mdp
   ${UTEXAS_PLANNING_LIBRARIES}

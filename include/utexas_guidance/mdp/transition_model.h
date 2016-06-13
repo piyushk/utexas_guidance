@@ -10,6 +10,8 @@
 #include <utexas_guidance/graph/graph.h>
 #include <utexas_guidance/mdp/structures.h>
 
+#include <utexas_planning/common/rng.h>
+
 namespace utexas_guidance {
 
   class HumanDecisionModel {
@@ -40,7 +42,7 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<TaskGenerationModel> Ptr;
       typedef boost::shared_ptr<TaskGenerationModel> ConstPtr;
 
-      virtual ~TaskGenerationModel() = 0;
+      virtual ~TaskGenerationModel();
       virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) = 0;
 
   };
@@ -57,7 +59,7 @@ namespace utexas_guidance {
                                 float task_utility,
                                 float task_time,
                                 bool home_base_only = false);
-      virtual ~TaskGenerationModel();
+      virtual ~RandomTaskGenerationModel();
 
       virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng);
 
@@ -84,7 +86,7 @@ namespace utexas_guidance {
       FixedTaskGenerationModel(const std::string& task_file,
                                float task_utility,
                                float task_time);
-      virtual ~TaskGenerationModel();
+      virtual ~FixedTaskGenerationModel();
 
       virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng);
 

@@ -2,7 +2,7 @@
 
 namespace utexas_guidance {
 
-  HumanDecisionModel::HumanDecisionModel(const bwi_mapper::Graph& graph, float decision_variance_multiplier = 1.0f) :
+  HumanDecisionModel::HumanDecisionModel(const Graph& graph, float decision_variance_multiplier = 1.0f) :
       graph_(graph), decision_variance_multiplier_(decision_variance_multiplier) {
     computeAdjacentVertices(adjacent_vertices_map_, graph_);
     computeAdjacentVerticesOnSameFloor(adjacent_vertices_on_same_floor_map_, graph_);
@@ -25,7 +25,7 @@ namespace utexas_guidance {
         return state.assist_loc;
       } else {
         expected_variance = 0.05f * decision_variance_multiplier_;
-        expected_direction_of_motion = bwi_mapper::getNodeAngle(state.loc_node, state.assist_loc, graph_);
+        expected_direction_of_motion = getNodeAngle(state.loc_node, state.assist_loc, graph_);
       }
     } else /* no assistance provided. */ {
       // Do nothing. Use default values for expected variance.
@@ -42,7 +42,7 @@ namespace utexas_guidance {
         int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_[state.loc_node].size() - 1);
         return adjacent_vertices_on_same_floor_map_[state.loc_node][rand_idx];
       } else {
-        expected_direction_of_motion = bwi_mapper::getNodeAngle(state.loc_prev, state.loc_node, graph_);
+        expected_direction_of_motion = getNodeAngle(state.loc_prev, state.loc_node, graph_);
         expected_variance = 0.1f * decision_variance_multiplier_;
       }
     }
@@ -51,7 +51,7 @@ namespace utexas_guidance {
     float weight_sum = 0;
     std::vector<float> weights;
     BOOST_FOREACH(int adj, adjacent_vertices_on_same_floor_map_[state.loc_node]) {
-      float next_state_direction = bwi_mapper::getNodeAngle(state.loc_node, adj, graph_);
+      float next_state_direction = getNodeAngle(state.loc_node, adj, graph_);
       float angle_difference = getAbsoluteAngleDifference(next_state_direction, expected_direction_of_motion);
 
       // Compute the probability of this state
@@ -80,8 +80,10 @@ namespace utexas_guidance {
     return adjacent_vertices_on_same_floor_map_[state.loc_node][rng.select(probabilities)];
   }
 
+  TaskGenerationModel::~TaskGenerationModel() {}
+
   RandomTaskGenerationModel::RandomTaskGenerationModel(const std::vector<int> robot_home_base,
-                                                       const bwi_mapper::Graph &graph,
+                                                       const Graph &graph,
                                                        float task_utility,
                                                        float task_time,
                                                        bool home_base_only) :
@@ -93,7 +95,7 @@ namespace utexas_guidance {
     cacheNewGoalsByDistance(graph);
   }
 
-  ~RandomTaskGenerationModel::RandomTaskGenerationModel() {}
+  RandomTaskGenerationModel::~RandomTaskGenerationModel() {}
 
   void RandomTaskGenerationModel::generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) {
     // Optimized!!!
@@ -113,7 +115,7 @@ namespace utexas_guidance {
     robot.tau_u = task_utility_;
   }
 
-  void RandomTaskGenerationModel::cacheNewGoalsByDistance(const bwi_mapper::Graph &graph) {
+  void RandomTaskGenerationModel::cacheNewGoalsByDistance(const Graph &graph) {
 
     // Select a random goal on the same floor.
     std::map<int, std::vector<int> > adjacent_vertices_map;
@@ -177,7 +179,7 @@ namespace utexas_guidance {
     robot.tau_u = task_utility_;
   }
 
-  MotionModel::MotionModel(const bwi_mapper::Graph graph,
+  MotionModel::MotionModel(const Graph graph,
                            float avg_robot_speed,
                            float avg_human_speed,
                            float avg_human_elevator_speed,
