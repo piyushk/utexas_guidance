@@ -9,16 +9,41 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
 
-#include <bwi_guidance_solver/mrn/common.h>
-#include <bwi_guidance_solver/mrn/person_model.h>
-#include <bwi_mapper/point_utils.h>
-#include <bwi_mapper/map_utils.h>
+#include <bwi_guidance_solver/mdp/common.h>
+#include <bwi_guidance_solver/mdp/guidance_model.h>
 
 namespace bwi_guidance_solver {
 
-  namespace mrn {
+  GuidanceModel::~GuidanceModel() {}
+
+  virtual void init(const YAML::Node& params,
+                    const std::string& output_directory,
+                    const boost::shared_ptr<RNG>& rng) {
+
+    params_.fromYaml(params);
+
+    /* Initialize all graphs and models. */
+    // TODO Test for graph and task allocation file here.
+    readGraphFromFile(params_.graph_file, graph_);
+    human_decision_model_.reset(new HumanDecisionModel(graph_, params_.human_variance_multiplier));
+    if (params_.task_model == FIXED_TASK_MODEL) {
+      task_generation_model_.reset(new FixedTaskGenerationModel(params_.task_model_file,
+                                                                params_.task_utility,
+                                                                params_.task_time));
+    } else if (params_.task_model == RANDOM_TASK_MODEL) {
+      task_generation_model_.reset(new RandomTaskGenerationModel(params_.task_model_file,
+                                                                 graph_,
+                                                                 params_.task_utility,
+                                                                 params_.task_time,
+                                                                 params_.task_at_home_base_only));
+    } else {
+      throw IncorrectUsageException(std::string("Task model: ") + params_.task_model + std::string(" is not defined."));
+    }
+    motion_model_.reset(new 
     
-    PersonModel::PersonModel(const bwi_mapper::Graph &graph, 
+  }
+
+    GuidanceModel::GuidanceModel(const Graph &graph, 
                              const nav_msgs::OccupancyGrid &map, 
                              int goal_idx, 
                              const MotionModel::Ptr &motion_model,
@@ -39,7 +64,7 @@ namespace bwi_guidance_solver {
         computeShortestPath(shortest_distances_, shortest_paths_, graph_);
       }
 
-    void PersonModel::getActionsAtState(const State& state, 
+    void GuidanceModel::getActionsAtState(const State& state, 
                                         std::vector<Action>& actions) {
       int action_counter = 0;
 
@@ -81,7 +106,7 @@ namespace bwi_guidance_solver {
       }
     }
 
-    void PersonModel::getFirstAction(const State &state, Action &action) {
+    void GuidanceModel::getFirstAction(const State &state, Action &action) {
       // This function cannot be optimized without maintaining state. Only present for legacy
       // reasons. Do not call it! For this reason, here is a very suboptimal implementation.
       std::vector<Action> actions;
@@ -89,7 +114,7 @@ namespace bwi_guidance_solver {
       action = actions[0];
     }
 
-    bool PersonModel::getNextAction(const State &state, Action &action) {
+    bool GuidanceModel::getNextAction(const State &state, Action &action) {
       // This function cannot be optimized without maintaining state. Only present for legacy
       // reasons. Do not call it!
       std::vector<Action> actions;
@@ -103,11 +128,11 @@ namespace bwi_guidance_solver {
       return false;
     }
 
-    void PersonModel::getAllActions(const State &state, std::vector<Action>& actions) {
+    void GuidanceModel::getAllActions(const State &state, std::vector<Action>& actions) {
       getActionsAtState(state, actions);
     }
 
-    void PersonModel::takeAction(const State &state, 
+    void GuidanceModel::takeAction(const State &state, 
                                  const Action &action, 
                                  float &reward, 
                                  State &next_state, 
@@ -129,7 +154,7 @@ namespace bwi_guidance_solver {
                  unused_frame_vector);
     }
 
-    void PersonModel::takeAction(const State &state, 
+    void GuidanceModel::takeAction(const State &state, 
                                  const Action &action, 
                                  float &reward, 
                                  State &next_state, 
@@ -216,7 +241,7 @@ namespace bwi_guidance_solver {
       terminal = (next_state.loc_node == goal_idx_);
     }
 
-    void PersonModel::getColocatedRobotIds(const State& state, std::vector<int> &robot_ids) {
+    void GuidanceModel::getColocatedRobotIds(const State& state, std::vector<int> &robot_ids) {
       // Figure out if there is a robot at the current position
       for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
         if ((state.robots[robot_id].help_destination == state.loc_node) &&
@@ -226,7 +251,7 @@ namespace bwi_guidance_solver {
       }
     }
 
-    void PersonModel::drawState(const State& state, cv::Mat& image) {
+    void GuidanceModel::drawState(const State& state, cv::Mat& image) {
 
       std::vector<std::pair<cv::Point2f, cv::Scalar> > draw_robots;
       std::vector<std::vector<SquareToDraw> > draw_robot_destinations;
@@ -260,8 +285,8 @@ namespace bwi_guidance_solver {
         }
 
         cv::Point2f robot_pos = 
-          (1.0f - robot.loc_p) * bwi_mapper::getLocationFromGraphId(robot.loc_u, graph_) + 
-          (robot.loc_p) * bwi_mapper::getLocationFromGraphId(robot.loc_v, graph_);
+          (1.0f - robot.loc_p) * getLocationFromGraphId(robot.loc_u, graph_) + 
+          (robot.loc_p) * getLocationFromGraphId(robot.loc_v, graph_);
         
         bool use_dashed_line = false;
         BOOST_FOREACH(int destination, destinations) {
@@ -359,14 +384,14 @@ namespace bwi_guidance_solver {
             }
             // Draw this line
             cv::Point2f start_pos = 
-              (1.0f - line->precision) * bwi_mapper::getLocationFromGraphId(s, graph_) + 
-              line->precision * bwi_mapper::getLocationFromGraphId(e, graph_);
+              (1.0f - line->precision) * getLocationFromGraphId(s, graph_) + 
+              line->precision * getLocationFromGraphId(e, graph_);
             if (line->dashed) {
-              dashedLine(image, bwi_mapper::getLocationFromGraphId(e, graph_), start_pos, line->color, 10,
+              dashedLine(image, getLocationFromGraphId(e, graph_), start_pos, line->color, 10,
                          thickness_map[line->priority], CV_AA);
             } else {
               cv::line(image,
-                       bwi_mapper::getLocationFromGraphId(e, graph_),
+                       getLocationFromGraphId(e, graph_),
                        start_pos,
                        line->color, thickness_map[line->priority], CV_AA);
             }
@@ -377,23 +402,23 @@ namespace bwi_guidance_solver {
       for (int i = 0; i < num_vertices_; ++i) {
         int size = 18 + 8 * draw_robot_destinations[i].size();
         BOOST_FOREACH(const SquareToDraw& square, draw_robot_destinations[i]) {
-          bwi_mapper::drawSquareOnGraph(image, graph_, i, square.color, 0, 0, size);
+          drawSquareOnGraph(image, graph_, i, square.color, 0, 0, size);
           size -= 8;
         }
       }
 
-      cv::Point2f goal_loc = bwi_mapper::getLocationFromGraphId(goal_idx_, graph_);
+      cv::Point2f goal_loc = getLocationFromGraphId(goal_idx_, graph_);
       drawCheckeredFlagOnImage(image, goal_loc);
 
       for (int i = 0; i < draw_robots.size(); ++i) {
         drawRobotOnImage(image, draw_robots[i].first + cv::Point2f(6, 6), draw_robots[i].second); 
       }
 
-      cv::Point2f human_pos = (1 - state.loc_p) * bwi_mapper::getLocationFromGraphId(state.loc_node, graph_);
+      cv::Point2f human_pos = (1 - state.loc_p) * getLocationFromGraphId(state.loc_node, graph_);
       if (state.loc_p > 0.0f) {
         // Note that loc_prev is a bit abused here. When loc_p != 0, loc_prev actually points to the node the person
         // is transitioning to.
-        human_pos += state.loc_p * bwi_mapper::getLocationFromGraphId(state.loc_prev, graph_);
+        human_pos += state.loc_p * getLocationFromGraphId(state.loc_prev, graph_);
       }
 
       // Offset for person
@@ -407,7 +432,7 @@ namespace bwi_guidance_solver {
         cv::Point2f colocated_robot_pos = human_pos + cv::Point2f(12, 6); 
 
         if ((state.assist_type == DIRECT_PERSON) && state.loc_p == 0.0f) {
-          float orientation = bwi_mapper::getNodeAngle(state.loc_node, state.assist_loc, graph_);
+          float orientation = getNodeAngle(state.loc_node, state.assist_loc, graph_);
           drawScreenWithDirectedArrowOnImage(image, colocated_robot_pos, orientation);
         } else if (state.assist_type == LEAD_PERSON) {
           drawScreenWithFollowMeText(image, colocated_robot_pos);

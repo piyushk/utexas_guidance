@@ -83,12 +83,11 @@ namespace utexas_guidance {
 
   TaskGenerationModel::~TaskGenerationModel() {}
 
-  RandomTaskGenerationModel::RandomTaskGenerationModel(const std::vector<int> robot_home_base,
+  RandomTaskGenerationModel::RandomTaskGenerationModel(const std::string& robot_home_base_file,
                                                        const Graph &graph,
                                                        float task_utility,
                                                        float task_time,
                                                        bool home_base_only) :
-      robot_home_base_(robot_home_base),
       task_utility_(task_utility),
       task_time_(task_time),
       home_base_only_(home_base_only) {

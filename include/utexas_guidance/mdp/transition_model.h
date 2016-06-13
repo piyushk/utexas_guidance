@@ -55,7 +55,7 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<RandomTaskGenerationModel> Ptr;
       typedef boost::shared_ptr<RandomTaskGenerationModel> ConstPtr;
 
-      RandomTaskGenerationModel(const std::vector<int> robot_home_base,
+      RandomTaskGenerationModel(const std::string& robot_home_base_file,
                                 const utexas_guidance::Graph &graph,
                                 float task_utility,
                                 float task_time,
@@ -93,8 +93,6 @@ namespace utexas_guidance {
 
     private:
 
-      void readFixedTasksFiles(const std::string& task_file);
-
       std::vector<std::vector<int> > tasks_;
 
       float task_utility_;
@@ -112,8 +110,8 @@ namespace utexas_guidance {
       MotionModel(const utexas_guidance::Graph graph,
                   float avg_robot_speed,
                   float avg_human_speed,
-                  float avg_elevator_speed,
-                  float avg_robot_elevator_speed);
+                  float avg_elevator_human_speed,
+                  float avg_elevator_robot_speed);
 
       virtual ~MotionModel();
       virtual void move(State &state,
