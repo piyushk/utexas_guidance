@@ -19,7 +19,7 @@ namespace utexas_guidance {
     LEAD_PERSON = 4
   };
 
-  class Action {
+  class Action : public utexas_planning::Action {
 
     public:
 

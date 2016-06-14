@@ -382,7 +382,7 @@ namespace utexas_guidance {
     Graph::vertex_descriptor vertex = boost::vertex(graph_id, graph);
     Graph::adjacency_iterator ai, aend;
     for (boost::tie(ai, aend) = boost::adjacent_vertices(vertex, graph); ai != aend; ++ai) {
-      if (onSameFloor(graph_id, indexmap[*ai])) {
+      if (onSameFloor(graph_id, indexmap[*ai], graph)) {
         adjacent_vertices.push_back(indexmap[*ai]);
       }
     }

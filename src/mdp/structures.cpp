@@ -12,7 +12,8 @@ namespace utexas_guidance {
   /* Action */
 
   Action::Action() : type(WAIT), robot_id(0), node(0) {}
-  Action::Action(ActionType a, int robot_id, int node) : type(a), robot_id(robot_id), node(node) {}
+  Action::Action(ActionType a, int robot_id, int node, int request_id) : 
+    type(a), robot_id(robot_id), node(node), request_id(request_id) {}
   Action::~Action() {}
 
   bool Action::operator<(const utexas_planning::Action& other_base) const {

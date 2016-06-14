@@ -41,29 +41,6 @@ namespace utexas_guidance {
                              const std::vector<std::vector<float> > &shortest_distances,
                              bool &reach_in_time);
 
-  inline void readRobotHomeBase(const std::string& robot_home_base_file, std::vector<int> &robot_home_base) {
-    robot_home_base.clear();
-    std::ifstream fin(robot_home_base_file.c_str());
-    int home_base;
-    fin >> home_base;
-    while (!fin.eof()) {
-      robot_home_base.push_back(home_base);
-      fin >> home_base;
-    }
-    fin.close();
-  }
-
-  inline int getColocatedRobotId(const State& state, const RequestState &rs) {
-    for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
-      if ((state.robots[robot_id].help_destination == rs.loc_node) &&
-          isRobotExactlyAt(state.robots[robot_id], rs.loc_node) &&
-          (rs.loc_p == 1.0f)) {
-        return robot_id;
-      }
-    }
-    return NONE;
-  }
-
 } /* utexas_guidance */
 
 #endif /* end of include guard: UTEXAS_GUIDANCE_COMMON_H */

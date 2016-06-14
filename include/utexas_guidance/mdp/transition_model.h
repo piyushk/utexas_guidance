@@ -120,10 +120,10 @@ namespace utexas_guidance {
                         RNG &rng,
                         float &total_time) const;
 
-      virtual float getHumanSpeed();
-      virtual float getRobotSpeed();
-      virtual float getHumanSpeedInElevator();
-      virtual float getRobotSpeedInElevator();
+      virtual float getHumanSpeed() const;
+      virtual float getRobotSpeed() const;
+      virtual float getHumanSpeedInElevator() const;
+      virtual float getRobotSpeedInElevator() const;
 
     private:
 

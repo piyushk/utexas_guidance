@@ -1,6 +1,8 @@
 #include <utexas_guidance/mdp/transition_model.h>
 #include <utexas_guidance/exceptions.h>
 
+#include <yaml-cpp/yaml.h>
+
 namespace utexas_guidance {
 
   HumanDecisionModel::HumanDecisionModel(const Graph& graph, float decision_variance_multiplier) :
@@ -40,7 +42,7 @@ namespace utexas_guidance {
         // The person changed floors, but no assistance was provided after changing floors, the person will likely
         // go anywhere, apart from going back into the elevator.
 
-        int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_.[state.loc_node].size() - 1);
+        int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_[state.loc_node].size() - 1);
         return adjacent_vertices_on_same_floor_map_[state.loc_node][rand_idx];
       } else {
         expected_direction_of_motion = getNodeAngle(state.loc_prev, state.loc_node, graph_);
@@ -91,8 +93,18 @@ namespace utexas_guidance {
       task_utility_(task_utility),
       task_time_(task_time),
       home_base_only_(home_base_only) {
-
     cacheNewGoalsByDistance(graph);
+
+    try {
+      YAML::Node config = YAML::LoadFile(robot_home_base_file);
+      for (unsigned int i = 0; i < config.size(); ++i) {
+        robot_home_base_.push_back(config[i]["home_base"].as<int>());
+      }
+    } catch (YAML::Exception& e) {
+      throw IncorrectUsageException(std::string("Failed loading RandomTaskGenerationModel from file ") + 
+                                    robot_home_base_file + std::string("with YAML error: ") + e.what());
+    }
+
   }
 
   RandomTaskGenerationModel::~RandomTaskGenerationModel() {}
@@ -149,7 +161,21 @@ namespace utexas_guidance {
                                                      float task_utility,
                                                      float task_time) :
       task_utility_(task_utility), task_time_(task_time) {
-    readFixedTasksFiles(task_file);
+
+    try {
+      YAML::Node config = YAML::LoadFile(task_file);
+      for (unsigned int robot_idx = 0; robot_idx < config.size(); ++robot_idx) {
+        std::vector<int> path;
+        for (unsigned int graph_idx = 0; graph_idx < config[robot_idx]["path"].size(); ++graph_idx) {
+          path.push_back(config[robot_idx]["path"][graph_idx].as<int>());
+        }
+        tasks_.push_back(path);
+      }
+    } catch (YAML::Exception& e) {
+      throw IncorrectUsageException(std::string("Failed loading FixedTaskGenerationModel from file ") + 
+                                    task_file + std::string("with YAML error: ") + e.what());
+    }
+
   }
 
   FixedTaskGenerationModel::~FixedTaskGenerationModel() {}
@@ -352,19 +378,19 @@ namespace utexas_guidance {
 
   }
 
-  float MotionModel::getHumanSpeed() {
+  float MotionModel::getHumanSpeed() const {
     return human_speed_;
   }
 
-  float MotionModel::getHumanSpeedInElevator() {
+  float MotionModel::getHumanSpeedInElevator() const {
     return elevator_human_speed_;
   }
 
-  float MotionModel::getRobotSpeed() {
+  float MotionModel::getRobotSpeed() const {
     return robot_speed_;
   }
 
-  float MotionModel::getRobotSpeedInElevator() {
+  float MotionModel::getRobotSpeedInElevator() const {
     return elevator_robot_speed_;
   }
 
