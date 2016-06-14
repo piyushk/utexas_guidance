@@ -60,10 +60,10 @@ namespace utexas_guidance {
 
   void getAdjacentVerticesOnSameFloor(int v, const Graph& graph, std::vector<int>& adjacent_vertices);
 
-  void getAllAdjacentVertices(std::map<int, std::vector<int> >& adjacent_vertices_map, 
+  void getAllAdjacentVertices(std::vector<std::vector<int> >& adjacent_vertices_map,
                               const Graph& graph);
 
-  void getAllAdjacentVerticesOnSameFloor(std::map<int, std::vector<int> >& adjacent_vertices_map, 
+  void getAllAdjacentVerticesOnSameFloor(std::vector<std::vector<int> >& adjacent_vertices_map,
                                          const Graph& graph);
 
   void draw(const Graph& graph,

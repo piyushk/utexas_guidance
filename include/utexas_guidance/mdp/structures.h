@@ -27,7 +27,7 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<const Action> ConstPtr;
 
       Action();
-      Action(ActionType a, int robot_id = 0, int node = 0);
+      Action(ActionType a, int robot_id = 0, int node = 0, int request_id = 0);
       virtual ~Action();
 
       virtual bool operator<(const utexas_planning::Action& other) const;
@@ -40,7 +40,9 @@ namespace utexas_guidance {
 
       ActionType type;
       int robot_id; // with ASSIGN_ROBOT, identifies the robot
-      int node; // with DIRECT_PERSON or LEAD_PERSON, identifies the direction the robot should guide/lead to.
+      int node; // with ASSIGN, identifies assigned location.
+                // with DIRECT_PERSON or LEAD_PERSON, identifies the direction the robot should guide/lead to.
+      int request_id; // with DIRECT_PERSON or LEAD_PERSON, identifies the request id being served.
 
     private:
 
@@ -49,6 +51,7 @@ namespace utexas_guidance {
         ar & BOOST_SERIALIZATION_NVP(type);
         ar & BOOST_SERIALIZATION_NVP(robot_id);
         ar & BOOST_SERIALIZATION_NVP(node);
+        ar & BOOST_SERIALIZATION_NVP(request_id);
       }
 
   };
@@ -70,6 +73,7 @@ namespace utexas_guidance {
     float tau_total_task_time;
     int tau_u;
 
+    int request_id;
     int help_destination;
 
   };

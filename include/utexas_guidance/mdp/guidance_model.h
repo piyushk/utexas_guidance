@@ -28,9 +28,9 @@ namespace utexas_guidnace {
       _(int,start_idx,start_idx,NONE) \
       _(int,goal_idx,goal_idx,NONE) \
       _(float,human_speed,human_speed,1.0f) \
-      _(float,robot_speed,robot_speed,1.0f) \
-      _(float,avg_el,task_time,1.0f) \
-      _(float,task_time,task_time,1.0f) \
+      _(float,robot_speed,robot_speed,0.5f) \
+      _(float,elevator_human_speed,elevator_human_speed,0.3f) \
+      _(float,elevator_robot_speed,elevator_robot_speed,0.2f) \
 
       Params_STRUCT(PARAMS)
 #undef PARAMS
@@ -69,13 +69,13 @@ namespace utexas_guidnace {
     private:
 
       /* Some private helper functions. */
-      void getColocatedRobotIds(const State& state, std::vector<int> &robot_ids);
+      void getColocatedRobotRequestIds(const State& state, std::vector<std::pair<int, int> >& robot_request_ids) const;
       void getActionsAtState(const State &state, std::vector<Action>& actions);
 
       /* Some cached data. */
       std::vector<std::vector<std::vector<size_t> > > shortest_paths_;
       std::vector<std::vector<float> > shortest_distances_;
-      std::map<int, std::vector<int> > adjacent_vertices_map_;
+      std::vector<std::vector<int> > adjacent_vertices_map_;
 
       /* The three subcomponents of the transition model. */
       const TaskGenerationModel::Ptr task_generation_model_;

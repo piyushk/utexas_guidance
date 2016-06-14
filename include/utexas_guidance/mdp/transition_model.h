@@ -30,8 +30,8 @@ namespace utexas_guidance {
     private:
 
       utexas_guidance::Graph graph_;
-      std::map<int, std::vector<int> > adjacent_vertices_map_;
-      std::map<int, std::vector<int> > adjacent_vertices_on_same_floor_map_;
+      std::vector<std::vector<int> > adjacent_vertices_map_;
+      std::vector<std::vector<int> > adjacent_vertices_on_same_floor_map_;
       float decision_variance_multiplier_;
 
   };
@@ -108,8 +108,8 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<const MotionModel> ConstPtr;
 
       MotionModel(const utexas_guidance::Graph graph,
-                  float avg_robot_speed,
                   float avg_human_speed,
+                  float avg_robot_speed,
                   float avg_elevator_human_speed,
                   float avg_elevator_robot_speed);
 
@@ -131,8 +131,8 @@ namespace utexas_guidance {
       std::vector<std::vector<std::vector<int> > > shortest_paths_;
       std::vector<std::vector<float> > shortest_distances_;
 
-      float robot_speed_;
       float human_speed_;
+      float robot_speed_;
       float elevator_human_speed_;
       float elevator_robot_speed_;
 

@@ -355,7 +355,7 @@ namespace utexas_guidance {
           shortest_distances[idx][j] = 0;
           shortest_paths[idx][j].clear();
         } else {
-          shortest_distances[idx][j] = 
+          shortest_distances[idx][j] =
             getShortestPathWithDistance(idx, j, shortest_paths[idx][j], graph);
           // Post-process the shortest path - add goal, remove start and reverse
           shortest_paths[idx][j].insert(shortest_paths[idx][j].begin(), j); // Add j
@@ -365,7 +365,7 @@ namespace utexas_guidance {
       }
     }
   }
-  
+
   void getAdjacentVertices(int graph_id, const Graph& graph, std::vector<int>& adjacent_vertices) {
     adjacent_vertices.clear();
     boost::property_map<Graph, boost::vertex_index_t>::type indexmap = boost::get(boost::vertex_index, graph);
@@ -376,15 +376,35 @@ namespace utexas_guidance {
     }
   }
 
-  void getAllAdjacentVertices(std::map<int, std::vector<int> >& adjacent_vertices_map,
+  void getAdjacentVerticesOnSameFloor(int graph_id, const Graph& graph, std::vector<int>& adjacent_vertices) {
+    adjacent_vertices.clear();
+    boost::property_map<Graph, boost::vertex_index_t>::type indexmap = boost::get(boost::vertex_index, graph);
+    Graph::vertex_descriptor vertex = boost::vertex(graph_id, graph);
+    Graph::adjacency_iterator ai, aend;
+    for (boost::tie(ai, aend) = boost::adjacent_vertices(vertex, graph); ai != aend; ++ai) {
+      if (onSameFloor(graph_id, indexmap[*ai])) {
+        adjacent_vertices.push_back(indexmap[*ai]);
+      }
+    }
+  }
+  void getAllAdjacentVertices(std::vector<std::vector<int> >& adjacent_vertices_map,
                               const Graph& graph) {
-    adjacent_vertices_map.clear();
+    adjacent_vertices_map.resize(boost::num_vertices(graph));
     for (int graph_id = 0; graph_id < boost::num_vertices(graph); ++graph_id) {
       std::vector<int> adjacent_vertices;
-      getAdjacentVertices(graph_id, graph, adjacent_vertices); 
+      getAdjacentVertices(graph_id, graph, adjacent_vertices);
       adjacent_vertices_map[graph_id] = std::vector<int>(adjacent_vertices.begin(), adjacent_vertices.end());
     }
   }
 
+  void getAllAdjacentVerticesOnSameFloor(std::vector<std::vector<int> >& adjacent_vertices_map,
+                                         const Graph& graph) {
+    adjacent_vertices_map.resize(boost::num_vertices(graph));
+    for (int graph_id = 0; graph_id < boost::num_vertices(graph); ++graph_id) {
+      std::vector<int> adjacent_vertices;
+      getAdjacentVerticesOnSameFloor(graph_id, graph, adjacent_vertices);
+      adjacent_vertices_map[graph_id] = std::vector<int>(adjacent_vertices.begin(), adjacent_vertices.end());
+    }
+  }
 
 } /* utexas_guidance */

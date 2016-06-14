@@ -34,14 +34,14 @@ namespace utexas_guidance {
         // This can only mean that this is the start state (as the person does not have loc_prev set), and the policy
         // called Wait without first calling LEAD or DIRECT, which is a terrible action since some free help went to
         // waste. Assume that the person will move completely randomly (including changing floors).
-        int rand_idx = rng.randomInt(adjacent_vertices_map_.find(state.loc_node)->second.size() - 1);
-        return adjacent_vertices_map_.find(state.loc_node)->second[rand_idx];
+        int rand_idx = rng.randomInt(adjacent_vertices_map_[state.loc_node].size() - 1);
+        return adjacent_vertices_map_[state.loc_node][rand_idx];
       } else if (!onSameFloor(state.loc_prev, state.loc_node, graph_)) {
         // The person changed floors, but no assistance was provided after changing floors, the person will likely
         // go anywhere, apart from going back into the elevator.
 
-        int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second.size() - 1);
-        return adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second[rand_idx];
+        int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_.[state.loc_node].size() - 1);
+        return adjacent_vertices_on_same_floor_map_[state.loc_node][rand_idx];
       } else {
         expected_direction_of_motion = getNodeAngle(state.loc_prev, state.loc_node, graph_);
         expected_variance = 0.1f * decision_variance_multiplier_;
@@ -51,7 +51,7 @@ namespace utexas_guidance {
     // Now assume that the person moves to one the adjacent locations
     float weight_sum = 0;
     std::vector<float> weights;
-    BOOST_FOREACH(int adj, adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second) {
+    BOOST_FOREACH(int adj, adjacent_vertices_on_same_floor_map_[state.loc_node]) {
       float next_state_direction = getNodeAngle(state.loc_node, adj, graph_);
       float angle_difference = getAbsoluteAngleDifference(next_state_direction, expected_direction_of_motion);
 
@@ -78,7 +78,7 @@ namespace utexas_guidance {
       //   ": " << probability << std::endl;
     }
 
-    return adjacent_vertices_on_same_floor_map_.find(state.loc_node)->second[rng.select(probabilities)];
+    return adjacent_vertices_on_same_floor_map_[state.loc_node][rng.select(probabilities)];
   }
 
   TaskGenerationModel::~TaskGenerationModel() {}
@@ -118,7 +118,7 @@ namespace utexas_guidance {
   void RandomTaskGenerationModel::cacheNewGoalsByDistance(const Graph &graph) {
 
     // Select a random goal on the same floor.
-    std::map<int, std::vector<int> > adjacent_vertices_map;
+    std::vector<std::vector<int> > adjacent_vertices_map;
     getAllAdjacentVerticesOnSameFloor(adjacent_vertices_map, graph);
     int num_vertices = boost::num_vertices(graph);
 
@@ -180,13 +180,13 @@ namespace utexas_guidance {
   }
 
   MotionModel::MotionModel(const Graph graph,
-                           float avg_robot_speed,
                            float avg_human_speed,
+                           float avg_robot_speed,
                            float avg_human_elevator_speed,
                            float avg_robot_elevator_speed) :
       graph_(graph),
-      robot_speed_(avg_robot_speed),
       human_speed_(avg_human_speed),
+      robot_speed_(avg_robot_speed),
       elevator_human_speed_(avg_human_elevator_speed),
       elevator_robot_speed_(avg_robot_elevator_speed) {
     getAllShortestPaths(shortest_distances_, shortest_paths_, graph_);
@@ -344,6 +344,10 @@ namespace utexas_guidance {
         robot.loc_p = 0.0f;
       }
 
+      // If a robot is exactly at his help destination, remove specific request_id allocation.
+      if (robot_in_use && isRobotExactlyAt(robot, destination)) {
+        robot.request_id = NONE;
+      }
     }
 
   }
