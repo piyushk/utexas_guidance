@@ -101,7 +101,7 @@ namespace utexas_guidance {
         robot_home_base_.push_back(config[i]["home_base"].as<int>());
       }
     } catch (YAML::Exception& e) {
-      throw IncorrectUsageException(std::string("Failed loading RandomTaskGenerationModel from file ") + 
+      throw IncorrectUsageException(std::string("Failed loading RandomTaskGenerationModel from file ") +
                                     robot_home_base_file + std::string("with YAML error: ") + e.what());
     }
 
@@ -172,7 +172,7 @@ namespace utexas_guidance {
         tasks_.push_back(path);
       }
     } catch (YAML::Exception& e) {
-      throw IncorrectUsageException(std::string("Failed loading FixedTaskGenerationModel from file ") + 
+      throw IncorrectUsageException(std::string("Failed loading FixedTaskGenerationModel from file ") +
                                     task_file + std::string("with YAML error: ") + e.what());
     }
 
@@ -219,6 +219,10 @@ namespace utexas_guidance {
   }
 
   MotionModel::~MotionModel() {}
+
+  static bool requestComplete(const RequestState& rs) {
+    return (rs.loc_node == rs.goal && rs.loc_p == 1.0f);
+  }
 
   /**
    * \brief  Given a human decision model, as well as a task generation model, move the system state forwards in time
@@ -268,6 +272,10 @@ namespace utexas_guidance {
         rs.assist_loc = NONE;
       }
     }
+
+    /* Remove all completed requests. */
+    state.requests.erase(std::remove_if(state.requests.begin(), state.requests.end(), requestComplete),
+                         state.requests.end());
 
     /* Move all robots using total_time.*/
 

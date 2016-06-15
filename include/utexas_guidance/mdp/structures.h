@@ -93,6 +93,7 @@ namespace utexas_guidance {
     int assist_type;
     int assist_loc;
 
+    int goal;
   };
 
   bool operator==(const RequestState& l, const RequestState& r);

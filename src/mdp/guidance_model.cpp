@@ -1,4 +1,6 @@
+#include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 #include <cassert>
 #include <cmath>
 #include <fstream>
@@ -57,7 +59,14 @@ namespace utexas_guidance {
     return std::string("GuidanceModel");
   }
 
-  bool GuidanceModel::isTerminalState(const utexas_planning::State::ConstPtr&) const {
+  bool GuidanceModel::isTerminalState(const utexas_planning::State::ConstPtr& state_base) const {
+    if (params_.terminate_at_zero_requests) {
+      State::ConstPtr state = boost::dynamic_pointer_cast<const State>(state_base);
+      if (!state) {
+        throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
+      }
+      return state->requests.size() == 0;
+    }
     return false;
   }
 
@@ -199,6 +208,67 @@ namespace utexas_guidance {
         action_counter += 2;
       }
     }
+  }
+
+  utexas_planning::State::ConstPtr GuidanceModel::getStartState(long seed) const {
+    State::Ptr state(new State);
+
+    /* Fill in the request portion. */
+
+    /* Ignore seed if debug parameters set. */
+    if (!params_.start_idxs.empty() || !params_.goal_idxs.empty()) {
+      if (params_.start_idxs.empty()) {
+        throw IncorrectUsageException("GuidanceModel: Empty start_idxs and non-empty goal_idxs provided via params!");
+      } else if (params_.goal_idxs.empty()) {
+        throw IncorrectUsageException("GuidanceModel: Non-empty start_idxs and empty goal_idxs provided via params!");
+      }
+      std::vector<std::string> start_idxs;
+      std::vector<std::string> goal_idxs;
+      boost::split(start_idxs, params_.start_idxs, boost::is_any_of(" ,;:"));
+      boost::split(goal_idxs, params_.goal_idxs, boost::is_any_of(" ,;:"));
+      if (start_idxs.size() != goal_idxs.size()) {
+        throw IncorrectUsageException("GuidanceModel: start_idxs and goal_idxs provided via params are diff length!");
+      }
+      state->requests.resize(start_idxs.size());
+      try {
+        for (unsigned int i = 0; i < start_idxs.size(); ++i) {
+          state->requests[i].loc_node = boost::lexical_cast<int>(start_idxs[i]);
+          if (state->requests[i].loc_node < 0 || state->requests[i].loc_node >= num_vertices_) {
+            throw IncorrectUsageException(std::string("GuidanceModel: A start_idx provided is not in range {0,...,") +
+                                          boost::lexical_cast<std::string>(num_vertices_) + std::string("}"));
+          }
+          state->requests[i].goal = boost::lexical_cast<int>(goal_idxs[i]);
+          if (state->requests[i].goal < 0 || state->requests[i].goal >= num_vertices_) {
+            throw IncorrectUsageException(std::string("GuidanceModel: A goal_idx provided is not in range {0,...,") +
+                                          boost::lexical_cast<std::string>(num_vertices_) + std::string("}"));
+          }
+        }
+      } catch (const boost::bad_lexical_cast& e) {
+        throw IncorrectUsageException("GuidanceModel: unable to parse start_idxs and/or goal_idxs as list of ints!");
+      }
+    } else {
+      RNG rng(seed);
+      state->requests.resize(params_.initial_num_requests);
+      for (unsigned int i = 0; i < state->requests.size(); ++i) {
+        state->requests[i].loc_node = rng.randomInt(num_vertices_);
+        state->requests[i].goal = rng.randomInt(num_vertices_);
+        while (state->requests[i].goal == state->requests[i].loc_node) {
+          state->requests[i].goal = rng.randomInt(num_vertices_);
+        }
+      }
+    }
+
+    for (unsigned int i = 0; i < state->requests.size(); ++i) {
+      state->requests[i].loc_prev = state->requests[i].loc_node;
+      state->requests[i].loc_p = 1.0f;
+      rng.randomInt(num_vertices_);
+      state->requests[i].goal = rng.randomInt(num_vertices_);
+      while (state->requests[i].goal == state->requests[i].loc_node) {
+        state->requests[i].goal = rng.randomInt(num_vertices_);
+      }
+    }
+
+    /* Fill in the robots portion. */
   }
 
 } /* utexas_guidance */

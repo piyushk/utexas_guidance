@@ -12,7 +12,7 @@ namespace utexas_guidance {
   /* Action */
 
   Action::Action() : type(WAIT), robot_id(0), node(0) {}
-  Action::Action(ActionType a, int robot_id, int node, int request_id) : 
+  Action::Action(ActionType a, int robot_id, int node, int request_id) :
     type(a), robot_id(robot_id), node(node), request_id(request_id) {}
   Action::~Action() {}
 
@@ -135,21 +135,23 @@ namespace utexas_guidance {
 
   /* RequestState */
 
-  bool operator==(const RequestState& l, const RequestState& r) {
-    return ((l.loc_node == r.loc_node) &&
-            (l.loc_prev == r.loc_prev) &&
-            (l.loc_p == r.loc_p) &&
-            (l.assist_type == r.assist_type) &&
-            (l.assist_loc == r.assist_loc));
-  }
-
   bool operator<(const RequestState& l, const RequestState& r) {
     COMPARE(loc_node);
     COMPARE(loc_prev);
     COMPARE(loc_p);
     COMPARE(assist_type);
     COMPARE(assist_loc);
+    COMPARE(goal);
     return false;
+  }
+
+  bool operator==(const RequestState& l, const RequestState& r) {
+    return ((l.loc_node == r.loc_node) &&
+            (l.loc_prev == r.loc_prev) &&
+            (l.loc_p == r.loc_p) &&
+            (l.assist_type == r.assist_type) &&
+            (l.assist_loc == r.assist_loc) && ;
+            (l.goal == r.goal));
   }
 
   bool operator>(const RequestState& l, const RequestState& r) {
@@ -158,7 +160,7 @@ namespace utexas_guidance {
 
   std::ostream& operator<<(std::ostream& stream, const RequestState& rs) {
     stream << "(<" << rs.loc_prev << "->" << rs.loc_node << ","  << rs.loc_p << ">, " <<
-      "<"  << rs.assist_type << "," << rs.assist_loc << ">)";
+      "<"  << rs.assist_type << "," << rs.assist_loc << ">, " << goal << ")";
     return stream;
   }
 
@@ -169,6 +171,7 @@ namespace utexas_guidance {
     boost::hash_combine(seed, rs.loc_p);
     boost::hash_combine(seed, rs.assist_type);
     boost::hash_combine(seed, rs.assist_loc);
+    boost::hash_combine(seed, rs.goal);
     return seed;
   }
 
