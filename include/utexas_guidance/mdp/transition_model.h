@@ -45,6 +45,8 @@ namespace utexas_guidance {
 
       virtual ~TaskGenerationModel();
       virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) const = 0;
+      virtual int getNumRobots() const = 0;
+      virtual int getStartingLocationForRobot(int robot_idx) const = 0;
 
   };
 
@@ -63,6 +65,8 @@ namespace utexas_guidance {
       virtual ~RandomTaskGenerationModel();
 
       virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) const;
+      virtual int getNumRobots() const;
+      virtual int getStartingLocationForRobot(int robot_idx) const;
 
     private:
 
@@ -90,6 +94,8 @@ namespace utexas_guidance {
       virtual ~FixedTaskGenerationModel();
 
       virtual void generateNewTaskForRobot(int robot_id, RobotState &robot, RNG &rng) const;
+      virtual int getNumRobots() const;
+      virtual int getStartingLocationForRobot(int robot_idx) const;
 
     private:
 

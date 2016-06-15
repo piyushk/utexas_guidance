@@ -212,8 +212,18 @@ namespace utexas_guidance {
 
   utexas_planning::State::ConstPtr GuidanceModel::getStartState(long seed) const {
     State::Ptr state(new State);
+    RNG rng(seed);
 
-    /* Fill in the request portion. */
+    /* Fill in the robots portion first. */
+    state->robots.resize(task_generation_model_->getNumRobots());
+    for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
+      state->robots[robot_idx].loc_u = state->robots[robot_idx].loc_v =
+        task_generation_model_->getStartingLocationForRobot(robot_idx);
+      state->robots[robot_idx].loc_p = 0.0f;
+      state->robots[robot_idx].tau_d = NONE;
+      task_generation_model_->generateNewTaskForRobot(robot_idx, state->robots[robot_idx], rng);
+      state->robots[robot_idx].request_id = state->robots[robot_idx].help_destination = NONE;
+    }
 
     /* Ignore seed if debug parameters set. */
     if (!params_.start_idxs.empty() || !params_.goal_idxs.empty()) {
@@ -247,10 +257,23 @@ namespace utexas_guidance {
         throw IncorrectUsageException("GuidanceModel: unable to parse start_idxs and/or goal_idxs as list of ints!");
       }
     } else {
-      RNG rng(seed);
       state->requests.resize(params_.initial_num_requests);
       for (unsigned int i = 0; i < state->requests.size(); ++i) {
-        state->requests[i].loc_node = rng.randomInt(num_vertices_);
+        // Make sure that this request doesn't start at the same location as another request.
+        while (true) {
+          state->requests[i].loc_node = state->robots[rng.randomInt(state->robots.size() - 1)].loc_u;
+          bool loc_diff_other_requests = true;
+          for (unsigned int j = 0; j < i; ++j) {
+            if (state->requests[i].loc_node == state->requests[j].loc_node) {
+              loc_diff_other_requests = false;
+              break;
+            }
+          }
+          if (loc_diff_other_requests) {
+            break;
+          }
+        }
+        // Make sure goal is different from start.
         state->requests[i].goal = rng.randomInt(num_vertices_);
         while (state->requests[i].goal == state->requests[i].loc_node) {
           state->requests[i].goal = rng.randomInt(num_vertices_);
@@ -261,14 +284,20 @@ namespace utexas_guidance {
     for (unsigned int i = 0; i < state->requests.size(); ++i) {
       state->requests[i].loc_prev = state->requests[i].loc_node;
       state->requests[i].loc_p = 1.0f;
-      rng.randomInt(num_vertices_);
-      state->requests[i].goal = rng.randomInt(num_vertices_);
-      while (state->requests[i].goal == state->requests[i].loc_node) {
-        state->requests[i].goal = rng.randomInt(num_vertices_);
+      state->requests[i].assist_type = NONE;
+      state->requests[i].assist_loc = NONE;
+    }
+
+    for (unsigned int i = 0; i < state->requests.size(); ++i) {
+      for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++j) {
+        if ((state.robots[robot_idx].help_destination == NONE) &&
+            (state.robots[robot_idx].loc_u == state.requests[i].loc_node)) {
+          state.robots[robot_idx].help_destination = state.robots[robot_idx].loc_u;
+        }
       }
     }
 
-    /* Fill in the robots portion. */
+    return state;
   }
 
 } /* utexas_guidance */

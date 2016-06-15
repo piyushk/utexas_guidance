@@ -157,6 +157,14 @@ namespace utexas_guidance {
     }
   }
 
+  int RandomTaskGenerationModel::getNumRobots() const {
+    return robot_home_base_.size();
+  }
+
+  int RandomTaskGenerationModel::getStartingLocationForRobot(int robot_idx) const {
+    return robot_home_base_[robot_idx];
+  }
+
   FixedTaskGenerationModel::FixedTaskGenerationModel(const std::string& task_file,
                                                      float task_utility,
                                                      float task_time) :
@@ -203,6 +211,14 @@ namespace utexas_guidance {
     robot.tau_t = 0.0f;
     robot.tau_total_task_time = task_time_;
     robot.tau_u = task_utility_;
+  }
+
+  int FixedGenerationTaskModel::getNumRobots() const {
+    return tasks_.size();
+  }
+
+  int FixedGenerationTaskModel::getStartingLocationForRobot(int robot_idx) const {
+    return tasks_[robot_idx][0];
   }
 
   MotionModel::MotionModel(const Graph graph,
