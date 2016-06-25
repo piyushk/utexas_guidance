@@ -19,6 +19,10 @@
 
 #include <utexas_planning/common/exceptions.h>
 
+/*
+ * fix problems with conflating time and distance. double check everything.
+ * Do visualization - much easier to debug. Do it with motion once time is available.
+ */
 namespace utexas_guidance {
 
   GuidanceModel::~GuidanceModel() {}
@@ -100,6 +104,10 @@ namespace utexas_guidance {
       } else /* if (action.type == DIRECT_PERSON || action.type == LEAD_PERSON) */ {
         next_state->requests[action->request_id].assist_type = action->type;
         next_state->requests[action->request_id].assist_loc = action->node;
+        if (action->type == LEAD_PERSON) {
+          next_state->robots[action->robot_id].help_destination = action->node;
+          next_state->robots[action->robot_id].is_leading_person = true;
+        }
       }
       reward = 0.0f;
       depth_count = 0;
@@ -139,7 +147,7 @@ namespace utexas_guidance {
                                                   std::vector<std::pair<int, int> >& robot_request_ids) const {
     // Figure out if there is a robot at the current position
     for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
-      if (state.robots[robot_id].request_id == NONE) {
+      if (!(state.robots[robot_id].is_leading_person)) {
         for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
           if ((state.robots[robot_id].help_destination == state.requests[request_id].loc_node) &&
               isRobotExactlyAt(state.robots[robot_id], state.requests[request_id].loc_node) &&
@@ -166,20 +174,6 @@ namespace utexas_guidance {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
 
-    // If every request is being handled by leading the person, no other action can be performed.
-    bool all_requests_being_lead = true;
-    BOOST_FOREACH(const RequestState& rs, state->requests) {
-      if (rs.assist_type != LEAD_PERSON) {
-        all_requests_being_lead = false;
-        break;
-      }
-    }
-
-    // No more actions available.
-    if (all_requests_being_lead) {
-      return;
-    }
-
     // Allow robots to be assigned/released at any given location.
     for (unsigned int robot = 0; robot < state->robots.size(); ++robot) {
       if (state->robots[robot].help_destination == NONE) {
@@ -188,7 +182,7 @@ namespace utexas_guidance {
           actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot, node));
           ++action_counter;
         }
-      } else {
+      } else if (!(state->robots[robot].is_leading_person)) {
         actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT, robot)));
         ++action_counter;
       }
@@ -225,7 +219,8 @@ namespace utexas_guidance {
       state->robots[robot_idx].loc_p = 0.0f;
       state->robots[robot_idx].tau_d = NONE;
       task_generation_model_->generateNewTaskForRobot(robot_idx, state->robots[robot_idx], rng);
-      state->robots[robot_idx].request_id = state->robots[robot_idx].help_destination = NONE;
+      state->robots[robot_idx].is_leading_person = false;
+      state->robots[robot_idx].help_destination = NONE;
     }
 
     /* Ignore seed if debug parameters set. */

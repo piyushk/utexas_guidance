@@ -91,7 +91,7 @@ namespace utexas_guidance {
     COMPARE(tau_t);
     COMPARE(tau_total_task_time);
     COMPARE(tau_u);
-    COMPARE(request_id);
+    COMPARE(is_leading_person);
     COMPARE(help_destination);
     return false;
   }
@@ -104,7 +104,7 @@ namespace utexas_guidance {
             (l.tau_t == r.tau_t) &&
             (l.tau_total_task_time == r.tau_total_task_time) &&
             (l.tau_u == r.tau_u) &&
-            (l.request_id == r.request_id) &&
+            (l.is_leading_person == r.is_leading_person) &&
             (l.help_destination == r.help_destination));
   }
 
@@ -115,7 +115,7 @@ namespace utexas_guidance {
   std::ostream& operator<<(std::ostream& stream, const RobotState& rs) {
     stream << "[(" << rs.loc_u << "->" << rs.loc_v << "," << rs.loc_p << "), (" <<
       rs.tau_d << "," <<  rs.tau_t << "," << rs.tau_total_task_time << "," << rs.tau_u << "), " <<
-      rs.request_id << "->" << rs.help_destination << "]";
+      rs.is_leading_person << "->" << rs.help_destination << "]";
     return stream;
   }
 
@@ -128,7 +128,7 @@ namespace utexas_guidance {
     boost::hash_combine(seed, rs.tau_t);
     boost::hash_combine(seed, rs.tau_total_task_time);
     boost::hash_combine(seed, rs.tau_u);
-    boost::hash_combine(seed, rs.request_id);
+    boost::hash_combine(seed, rs.is_leading_person);
     boost::hash_combine(seed, rs.help_destination);
     return seed;
   }

@@ -7,7 +7,7 @@ namespace utexas_guidance {
 
   class ExtendedState : public State {
 
-  public: 
+  public:
 
     typedef boost::shared_ptr<ExtendedState> Ptr;
     typedef boost::shared_ptr<const ExtendedState> ConstPtr;

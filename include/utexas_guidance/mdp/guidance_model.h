@@ -69,7 +69,7 @@ namespace utexas_guidance {
       // virtual std::map<std::string, std::string> getParamsAsMap() const;
       // virtual utexas_planning::RewardMetrics::Ptr getRewardMetricsAtEpisodeStart() const;
 
-    private:
+    protected:
 
       /* Some private helper functions. */
       void getColocatedRobotRequestIds(const State& state, std::vector<std::pair<int, int> >& robot_request_ids) const;

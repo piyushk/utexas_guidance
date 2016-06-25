@@ -398,7 +398,7 @@ namespace utexas_guidance {
 
       // If a robot is exactly at his help destination, remove specific request_id allocation.
       if (robot_in_use && isRobotExactlyAt(robot, destination)) {
-        robot.request_id = NONE;
+        robot.is_leading_person = false;
       }
     }
 
