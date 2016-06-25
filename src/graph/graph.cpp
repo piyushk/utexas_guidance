@@ -279,8 +279,8 @@ namespace utexas_guidance {
 
   bool onSameFloor(int idx1, int idx2, const Graph& graph) {
     Point3f loc1 = getLocationFromGraphId(idx1, graph);
-    Point3f loc2 = getLocationFromGraphId(idx1, graph);
-    return loc1.get<2>() != loc2.get<2>();
+    Point3f loc2 = getLocationFromGraphId(idx2, graph);
+    return loc1.get<2>() == loc2.get<2>();
   }
 
   float getAbsoluteAngleDifference(float angle1, float angle2) {

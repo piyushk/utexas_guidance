@@ -25,7 +25,7 @@ namespace utexas_guidance {
       _(float,task_time,task_time,1.0f) \
       _(float,task_utility,task_utility,1.0f) \
       _(bool,task_at_home_base_only,task_at_home_base_only,false) /* For RandomTaskGenerationModel only. */ \
-      _(int,inital_num_requests,initial_num_requests,1) \ /* Ignored if getStartState is not used. */ \
+      _(int,initial_num_requests,initial_num_requests,1) /* Ignored if getStartState is not used. */ \
       _(std::string,start_idxs,start_idxs,"") /* Debugging only. */ \
       _(std::string,goal_idxs,goal_idxs,"") /* Debugging only. */ \
       _(bool,terminate_at_zero_requests,terminate_at_zero_requests,true) \
@@ -33,6 +33,7 @@ namespace utexas_guidance {
       _(float,robot_speed,robot_speed,0.5f) \
       _(float,elevator_human_speed,elevator_human_speed,0.3f) \
       _(float,elevator_robot_speed,elevator_robot_speed,0.2f) \
+      _(float,initial_planning_time,initial_planning_time,10.0f) \
 
       Params_STRUCT(PARAMS)
 #undef PARAMS

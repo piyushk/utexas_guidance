@@ -11,6 +11,8 @@
 #include <boost/serialization/map.hpp>
 #include <boost/serialization/vector.hpp>
 
+#include <class_loader/class_loader.h>
+
 #include <utexas_guidance/exceptions.h>
 #include <utexas_guidance/mdp/common.h>
 #include <utexas_guidance/mdp/guidance_model.h>
@@ -137,10 +139,11 @@ namespace utexas_guidance {
                                                   std::vector<std::pair<int, int> >& robot_request_ids) const {
     // Figure out if there is a robot at the current position
     for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
-      if (state.robots[robot_id].request_id != NONE) {
+      if (state.robots[robot_id].request_id == NONE) {
         for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
           if ((state.robots[robot_id].help_destination == state.requests[request_id].loc_node) &&
-              isRobotExactlyAt(state.robots[robot_id], state.requests[request_id].loc_node)) {
+              isRobotExactlyAt(state.robots[robot_id], state.requests[request_id].loc_node) &&
+              state.requests[request_id].assist_type == NONE) {
             robot_request_ids.push_back(std::pair<int, int>(robot_id, request_id));
           }
         }
@@ -289,10 +292,10 @@ namespace utexas_guidance {
     }
 
     for (unsigned int i = 0; i < state->requests.size(); ++i) {
-      for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++j) {
-        if ((state.robots[robot_idx].help_destination == NONE) &&
-            (state.robots[robot_idx].loc_u == state.requests[i].loc_node)) {
-          state.robots[robot_idx].help_destination = state.robots[robot_idx].loc_u;
+      for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
+        if ((state->robots[robot_idx].help_destination == NONE) &&
+            (state->robots[robot_idx].loc_u == state->requests[i].loc_node)) {
+          state->robots[robot_idx].help_destination = state->robots[robot_idx].loc_u;
         }
       }
     }
@@ -300,4 +303,10 @@ namespace utexas_guidance {
     return state;
   }
 
+  float GuidanceModel::getInitialTimeout() const {
+    return params_.initial_planning_time;
+  }
+
 } /* utexas_guidance */
+
+CLASS_LOADER_REGISTER_CLASS(utexas_guidance::GuidanceModel, utexas_planning::GenerativeModel);

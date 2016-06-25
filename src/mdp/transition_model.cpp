@@ -204,7 +204,7 @@ namespace utexas_guidance {
       }
       if (!task_found) {
         throw utexas_guidance::IncorrectUsageException("Robot assigned task outside specified list in "
-                                                       "FixedGenerationTaskModel. Cannot assign new task!");
+                                                       "FixedTaskGenerationModel. Cannot assign new task!");
       }
     }
 
@@ -213,11 +213,11 @@ namespace utexas_guidance {
     robot.tau_u = task_utility_;
   }
 
-  int FixedGenerationTaskModel::getNumRobots() const {
+  int FixedTaskGenerationModel::getNumRobots() const {
     return tasks_.size();
   }
 
-  int FixedGenerationTaskModel::getStartingLocationForRobot(int robot_idx) const {
+  int FixedTaskGenerationModel::getStartingLocationForRobot(int robot_idx) const {
     return tasks_[robot_idx][0];
   }
 
@@ -271,6 +271,8 @@ namespace utexas_guidance {
       }
 
       float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speeds[i];
+      // std::cout << shortest_distances_[rs.loc_prev][rs.loc_node] << std::endl;
+      // std::cout << human_speeds[i] << std::endl;
       total_time = std::min(total_time, time_to_dest);
     }
 

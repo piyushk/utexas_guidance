@@ -150,7 +150,7 @@ namespace utexas_guidance {
             (l.loc_prev == r.loc_prev) &&
             (l.loc_p == r.loc_p) &&
             (l.assist_type == r.assist_type) &&
-            (l.assist_loc == r.assist_loc) && ;
+            (l.assist_loc == r.assist_loc) &&
             (l.goal == r.goal));
   }
 
@@ -160,7 +160,7 @@ namespace utexas_guidance {
 
   std::ostream& operator<<(std::ostream& stream, const RequestState& rs) {
     stream << "(<" << rs.loc_prev << "->" << rs.loc_node << ","  << rs.loc_p << ">, " <<
-      "<"  << rs.assist_type << "," << rs.assist_loc << ">, " << goal << ")";
+      "<"  << rs.assist_type << "," << rs.assist_loc << ">, " << rs.goal << ")";
     return stream;
   }
 

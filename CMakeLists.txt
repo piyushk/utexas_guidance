@@ -55,19 +55,6 @@ endif(NOT OPENGL_FOUND)
 
 include_directories(include)
 
-add_library(mdp
-  src/mdp/common.cpp
-  src/mdp/extended_structures.cpp
-  src/mdp/guidance_model.cpp
-  src/mdp/structures.cpp
-  src/mdp/transition_model.cpp
-)
-target_link_libraries(mdp
-  ${UTEXAS_PLANNING_LIBRARIES}
-  ${Boost_LIBRARIES}
-  ${YAML_CPP_LIBRARIES}
-)
-
 add_library(graph
   src/graph/graph.cpp
 )
@@ -77,6 +64,20 @@ target_link_libraries(graph
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
+)
+
+add_library(mdp
+  src/mdp/common.cpp
+  src/mdp/extended_structures.cpp
+  src/mdp/guidance_model.cpp
+  src/mdp/structures.cpp
+  src/mdp/transition_model.cpp
+)
+target_link_libraries(mdp
+  graph
+  ${UTEXAS_PLANNING_LIBRARIES}
+  ${Boost_LIBRARIES}
+  ${YAML_CPP_LIBRARIES}
 )
 
 add_executable(graph_viewer
@@ -102,6 +103,7 @@ target_link_libraries(main
 install(
   TARGETS
     graph
+    mdp
     main
   ARCHIVE DESTINATION bin
   LIBRARY DESTINATION lib
