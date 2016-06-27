@@ -2,11 +2,11 @@
 
 /*
  * max assigned robots.
- * max distance away
  * structure (DIRECTS then leads RELEASES then ASSIGNS then LEADS then WAIT)
  * Don't assign robot to location where it's been released from.
  * ensure if robot is colocated, then lead or guide is called prior to wait.
  * do not assign robot to a location where another robot is.
+ * max distance away
  *
  * only one we can't do is releasing a robot after directing a human, as that one's a bit iffy and will require saving
  * more information. add prev_action to guidance_model, and add heuristics to that instead of doing the separate class.
@@ -14,6 +14,12 @@
  */
 
 namespace utexas_guidance {
+
+  void RestrictedModel::init(const YAML::Node& params,
+                             const std::string& output_directory,
+                             const boost::shared_ptr<RNG>& rng) {
+    GuidanceModel::init(params, output_directory, rng);
+    restricted_model_params_.fromYaml(params);
 
   std::string RestricteModel::getName() const {
     return std::string("RestrictedModel");
@@ -35,9 +41,7 @@ namespace utexas_guidance {
     actions.push_back(action);
     ++action_counter;
 
-    State::ConstPtr state = boost::dynamic_pointer_cast<const State>(state_base);
-    if (!state) {
-      throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
+    for (unsigned int robot = 0; robot < state->robots.size(); ++robot) {
     }
 
     // Allow robots to be assigned/released at any given location.
@@ -71,109 +75,9 @@ namespace utexas_guidance {
         action_counter += 2;
       }
     }
-    // If direct and lead are legal actions, remove other actions.
-
-    // Check if leading a person is allowed here.
-    if (colocated_robot_id != NONE) {
-      actions.resize(action_counter + adjacent_vertices_map_[state.loc_node].size());
-      for (unsigned int adj = 0; adj < adjacent_vertices_map_[state.loc_node].size(); ++adj) {
-        actions[action_counter] =
-          Action(LEAD_PERSON, colocated_robot_id, adjacent_vertices_map_[state.loc_node][adj]);
-        ++action_counter;
-      }
-    }
-
-    // Check if assigning a robot is allowed here.
-    std::vector<int> unassignable_locations;
-    for (unsigned int robot = 0; robot < state.robots.size(); ++robot) {
-      if (state.robots[robot].help_destination != NONE) {
-        unassignable_locations.push_back(state.robots[robot].help_destination);
-      }
-    }
-
-    if (unassignable_locations.size() < params_.max_assigned_robots) {
-      unassignable_locations.insert(unassignable_locations.end(), state.released_locations.begin(), state.released_locations.end());
-      for (unsigned int adj = 0; adj < action_vertices_map_[state.loc_node].size(); ++adj) {
-        int node = action_vertices_map_[state.loc_node][adj];
-        if (std::find(unassignable_locations.begin(), unassignable_locations.end(), node) ==
-            unassignable_locations.end()) {
-          // Note that the robot id is unknown here, so we'll use -1.
-          actions.push_back(Action(ASSIGN_ROBOT, -1, node));
-          ++action_counter;
-        }
-      }
-    }
-
-    // Check if releasing a robot is allowed here.
-    if (state.prev_action.type == WAIT ||
-        state.prev_action.type == RELEASE_ROBOT ||
-        state.prev_action.type == DIRECT_PERSON) {
-      for (unsigned int robot = 0; robot < state.robots.size(); ++robot) {
-        if (state.robots[robot].help_destination != NONE) {
-          actions.push_back(Action(RELEASE_ROBOT, robot));
-        }
-      }
-    }
-
-    // Finally see if directing a person is allowed here.
-    if (colocated_robot_id != NONE && state.prev_action == WAIT) {
-      actions.resize(action_counter + adjacent_vertices_map_[state.loc_node].size());
-      for (unsigned int adj = 0; adj < adjacent_vertices_map_[state.loc_node].size(); ++adj) {
-        actions[action_counter] =
-          Action(DIRECT_PERSON, colocated_robot_id, adjacent_vertices_map_[state.loc_node][adj]);
-        ++action_counter;
-      }
-    }
 
   }
 
-  void RestrictedModel::getFirstAction(const ExtendedState &state, Action &action) {
-    // This function cannot be optimized without maintaining state. Only present for legacy
-    // reasons. Do not call it! For this reason, here is a very suboptimal implementation.
-    std::vector<Action> actions;
-    getActionsAtState(state, actions);
-    action = actions[0];
-  }
-
-  bool RestrictedModel::getNextAction(const ExtendedState &state, Action &action) {
-    // This function cannot be optimized without maintaining state. Only present for legacy
-    // reasons. Do not call it!
-    std::vector<Action> actions;
-    getActionsAtState(state, actions);
-    for (unsigned int action_id = 0; action_id < actions.size() - 1; ++action_id) {
-      if (actions[action_id] == action) {
-        action = actions[action_id + 1];
-        return true;
-      }
-    }
-    return false;
-  }
-
-  void RestrictedModel::getAllActions(const ExtendedState &state, std::vector<Action>& actions) {
-    getActionsAtState(state, actions);
-  }
-
-  void RestrictedModel::takeAction(const ExtendedState &state,
-                                   const Action &action,
-                                   float &reward,
-                                   ExtendedState &next_state,
-                                   bool &terminal,
-                                   int &depth_count,
-                                   boost::shared_ptr<RNG> rng) {
-
-    float unused_utility_loss, unused_time_loss;
-    std::vector<State> unused_frame_vector;
-    takeAction(state,
-               action,
-               reward,
-               next_state,
-               terminal,
-               depth_count,
-               rng,
-               unused_time_loss,
-               unused_utility_loss,
-               unused_frame_vector);
-  }
 
   void RestrictedModel::takeAction(const ExtendedState &state,
                                    const Action &action,
@@ -243,10 +147,6 @@ namespace utexas_guidance {
     } else {
       next_state.released_locations = state.released_locations;
     }
-  }
-
-  void RestrictedModel::drawState(const State& state, cv::Mat& image) {
-    base_model_->drawState(state, image);
   }
 
 } /* utexas_guidance */
