@@ -1,11 +1,7 @@
 #ifndef UTEXAS_GUIDANCE_TRANSITION_MODEL_H
 #define UTEXAS_GUIDANCE_TRANSITION_MODEL_H
 
-#include <boost/foreach.hpp>
 #include <boost/shared_ptr.hpp>
-
-// #include <utexas_guidance/common.h>
-// #include <utexas_guidance/mrn/common.h>
 
 #include <utexas_guidance/graph/graph.h>
 #include <utexas_guidance/mdp/common.h>

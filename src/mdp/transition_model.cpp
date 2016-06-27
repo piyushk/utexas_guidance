@@ -1,3 +1,5 @@
+#include <boost/foreach.hpp>
+
 #include <utexas_guidance/mdp/transition_model.h>
 #include <utexas_guidance/exceptions.h>
 

@@ -140,7 +140,7 @@ namespace utexas_guidance {
       depth_count = lrint(time_loss);
     }
 
-    next_state_base = boost::static_pointer_cast<const State>(next_state);
+    next_state_base = boost::static_pointer_cast<const utexas_planning::State>(next_state);
   }
 
   void GuidanceModel::getColocatedRobotRequestIds(const State& state,

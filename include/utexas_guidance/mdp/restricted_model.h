@@ -1,18 +1,25 @@
-#ifndef UTEXAS_GUIDANCE_RESTRICTED_MODEL
-#define UTEXAS_GUIDANCE_RESTRICTED_MODEL
+#ifndef UTEXAS_GUIDANCE_RESTRICTED_MODEL_H
+#define UTEXAS_GUIDANCE_RESTRICTED_MODEL_H
+
+#include <utexas_guidance/mdp/extended_structures.h>
+#include <utexas_guidance/mdp/guidance_model.h>
 
 namespace utexas_guidance {
 
   const static int MAX_ASSIGNED_ROBOTS_NOLIMIT = -1;
   const static int MAX_ASSIGNED_ROBOTS_SAME_AS_REQUESTS = -2;
 
-  class RestrictedModel : public RestrictedModel {
+  class RestrictedModel : public GuidanceModel {
 
     public:
 
 #define PARAMS(_) \
-      _(int,max_assigned_robots,max_assigned_robots,MAX_ASSIGNED_ROBOTS_SAME_AS_REQUESTS) \
-      _(int,assign_n_adjacent,assign_n_adjacent,3) \
+      _(bool,h1_autoselect_robot_for_destinations,h1_autoselect_robot_for_destinations,false) \
+      _(int,h2_max_assigned_robots,h2_max_assigned_robots,MAX_ASSIGNED_ROBOTS_SAME_AS_REQUESTS) \
+      _(bool,h3_restrict_ordering,h3_restrict_ordering,true) \
+      _(bool,h4_disallow_multiple_assignments,h4_disallow_multiple_assignments,true) \
+      _(bool,h6_force_assistance,h6_force_assistance,true) \
+      _(bool,h7_prevent_assignment_to_release_locs,h7_prevent_assignment_to_release_locs,true) \
 
       Params_STRUCT(PARAMS)
 #undef PARAMS
@@ -44,9 +51,11 @@ namespace utexas_guidance {
 
     private:
 
+      /* int selectBestRobotForTask(const ExtendedState& state, int destination) const; */
+
       Params restricted_model_params_;
   };
 
 } /* utexas_guidance */
 
-#endif /* end of include guard: UTEXAS_GUIDANCE_RESTRICTED_MODEL */
+#endif /* end of include guard: UTEXAS_GUIDANCE_RESTRICTED_MODEL_H */

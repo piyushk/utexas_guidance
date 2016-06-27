@@ -70,6 +70,7 @@ add_library(mdp
   src/mdp/common.cpp
   src/mdp/extended_structures.cpp
   src/mdp/guidance_model.cpp
+  src/mdp/restricted_model.cpp
   src/mdp/structures.cpp
   src/mdp/transition_model.cpp
 )
