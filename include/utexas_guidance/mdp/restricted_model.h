@@ -14,7 +14,7 @@ namespace utexas_guidance {
     public:
 
 #define PARAMS(_) \
-      _(bool,h1_autoselect_robot_for_destinations,h1_autoselect_robot_for_destinations,false) \
+      _(bool,h1_autoselect_robot_for_destinations,h1_autoselect_robot_for_destinations,true) \
       _(int,h2_max_assigned_robots,h2_max_assigned_robots,MAX_ASSIGNED_ROBOTS_SAME_AS_REQUESTS) \
       _(bool,h3_restrict_ordering,h3_restrict_ordering,true) \
       _(bool,h4_disallow_multiple_assignments,h4_disallow_multiple_assignments,true) \
@@ -51,7 +51,7 @@ namespace utexas_guidance {
 
     private:
 
-      /* int selectBestRobotForTask(const ExtendedState& state, int destination) const; */
+      int selectBestRobotForTask(const ExtendedState& state, int destination) const;
 
       Params restricted_model_params_;
   };

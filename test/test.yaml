@@ -1,5 +1,6 @@
 models:
-  - name: utexas_guidance::GuidanceModel
+  # - name: utexas_guidance::GuidanceModel
+  - name: utexas_guidance::RestrictedModel
     graph_file: /home/piyushk/utexas_planning/utexas_guidance/graphs/test.yaml
     task_model_file: /home/piyushk/utexas_planning/utexas_guidance/test/fixed_tasks.yaml
 planners:

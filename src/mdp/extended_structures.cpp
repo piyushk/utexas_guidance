@@ -8,6 +8,9 @@ namespace utexas_guidance {
 
   /* ExtendedState */
 
+  ExtendedState::ExtendedState() {} 
+  ExtendedState::ExtendedState(const State& state) : State(state), prev_action(WAIT) {}
+
   ExtendedState::~ExtendedState() {}
 
   bool ExtendedState::operator<(const utexas_planning::State& other_base) const {

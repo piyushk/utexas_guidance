@@ -12,6 +12,9 @@ namespace utexas_guidance {
     typedef boost::shared_ptr<ExtendedState> Ptr;
     typedef boost::shared_ptr<const ExtendedState> ConstPtr;
 
+    ExtendedState();
+    ExtendedState(const State& state);
+
     virtual ~ExtendedState();
 
     virtual bool operator<(const utexas_planning::State& other) const;

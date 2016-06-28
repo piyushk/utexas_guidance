@@ -1,8 +1,12 @@
+#include <class_loader/class_loader.h>
+
 #include <utexas_guidance/mdp/common.h>
 #include <utexas_guidance/mdp/restricted_model.h>
 #include <utexas_planning/common/exceptions.h>
 
 namespace utexas_guidance {
+
+  RestrictedModel::~RestrictedModel() {}
 
   void RestrictedModel::init(const YAML::Node& params,
                              const std::string& output_directory,
@@ -20,7 +24,7 @@ namespace utexas_guidance {
 
     ExtendedState::ConstPtr state = boost::dynamic_pointer_cast<const ExtendedState>(state_base);
     if (!state) {
-      throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
+      throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::ExtendedState");
     }
 
     // Heuristic 3: Compute which actions are allowed given a strict ordering.
@@ -42,7 +46,39 @@ namespace utexas_guidance {
     actions.clear();
     int action_counter = 0;
 
-    actions.resize(state->robots.size());
+    // Allow leading/guiding via all colocated robots.
+    std::vector<std::pair<int, int> > robot_request_ids;
+    getColocatedRobotRequestIds(*state, robot_request_ids);
+    bool lead_or_direct_action_available = false;
+    for (unsigned int idx_num = 0; idx_num < robot_request_ids.size(); ++idx_num) {
+      int robot_id = robot_request_ids[idx_num].first;
+      int request_id = robot_request_ids[idx_num].second;
+      const RequestState& request = state->requests[request_id];
+      actions.resize(action_counter + 2 * adjacent_vertices_map_[request.loc_node].size());
+      for (unsigned int adj = 0; adj < adjacent_vertices_map_[request.loc_node].size(); ++adj) {
+        if (direct_person_allowed) {
+          actions[action_counter] =
+            Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
+          ++action_counter;
+          lead_or_direct_action_available = true;
+        }
+        if (lead_person_allowed) {
+          actions[action_counter] =
+            Action::Ptr(new Action(LEAD_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
+          ++action_counter;
+          lead_or_direct_action_available = true;
+        }
+      }
+    }
+
+    // Disallow other actions until it's decided how to help a colocated human.
+    if (lead_or_direct_action_available && restricted_model_params_.h6_force_assistance) {
+      wait_allowed = false;
+      release_robot_allowed = false;
+      assign_robot_allowed = false;
+    }
+
+    actions.resize(action_counter + state->robots.size());
     int assigned_robots = 0;
     std::vector<bool> assignable_locations(num_vertices_, true);
     for (unsigned int robot = 0; robot < state->robots.size(); ++robot) {
@@ -52,9 +88,11 @@ namespace utexas_guidance {
         if (restricted_model_params_.h4_disallow_multiple_assignments) {
           assignable_locations[state->robots[robot].help_destination] = false;
         }
-        if (!(state->robots[robot].is_leading_person)) {
-          actions[action_counter] = Action::Ptr(new Action(RELEASE_ROBOT, robot));
-          ++action_counter;
+        if (release_robot_allowed) {
+          if (!(state->robots[robot].is_leading_person)) {
+            actions[action_counter] = Action::Ptr(new Action(RELEASE_ROBOT, robot));
+            ++action_counter;
+          }
         }
       }
     }
@@ -95,42 +133,14 @@ namespace utexas_guidance {
       }
     }
 
-    // Allow leading/guiding via all colocated robots.
-    std::vector<std::pair<int, int> > robot_request_ids;
-    getColocatedRobotRequestIds(*state, robot_request_ids);
-    for (unsigned int idx_num = 0; idx_num < robot_request_ids.size(); ++idx_num) {
-      int robot_id = robot_request_ids[idx_num].first;
-      int request_id = robot_request_ids[idx_num].second;
-      const RequestState& request = state->requests[request_id];
-      if (direct_person_allowed) {
-        actions.resize(action_counter + adjacent_vertices_map_[request.loc_node].size());
-        for (unsigned int adj = 0; adj < adjacent_vertices_map_[request.loc_node].size(); ++adj) {
-          actions[action_counter] =
-            Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
-          ++action_counter;
-        }
-        wait_allowed = !restricted_model_params_.h6_force_assistance;
-      }
-      if (lead_person_allowed) {
-        actions.resize(action_counter + adjacent_vertices_map_[request.loc_node].size());
-        for (unsigned int adj = 0; adj < adjacent_vertices_map_[request.loc_node].size(); ++adj) {
-          actions[action_counter] =
-            Action::Ptr(new Action(LEAD_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
-          ++action_counter;
-        }
-        wait_allowed = !restricted_model_params_.h6_force_assistance;
-      }
-    }
-
-    // Wait is allowed at all times.
     if (wait_allowed) {
-      Action::Ptr action(new Action(WAIT, 0, 0));
-      actions.push_back(action);
+      actions.resize(action_counter + 1);
+      actions[action_counter] = Action::Ptr(new Action(WAIT));
       ++action_counter;
     }
 
+    actions.resize(action_counter);
   }
-
 
   void RestrictedModel::takeAction(const utexas_planning::State::ConstPtr& state_base,
                                    const utexas_planning::Action::ConstPtr& action_base,
@@ -153,7 +163,7 @@ namespace utexas_guidance {
 
     Action::Ptr mutable_action(new Action(*action));
     if (mutable_action->type == ASSIGN_ROBOT && mutable_action->robot_id == NONE) {
-      /* mutable_action->robot_id = selectBestRobotForTask(*state, action->node); */
+      mutable_action->robot_id = selectBestRobotForTask(*state, action->node);
     }
 
     GuidanceModel::takeAction(state_base,
@@ -165,9 +175,9 @@ namespace utexas_guidance {
                               post_action_timeout,
                               rng);
 
-    ExtendedState::ConstPtr next_state = boost::dynamic_pointer_cast<const ExtendedState>(next_state_base);
+    State::ConstPtr next_state = boost::dynamic_pointer_cast<const State>(next_state_base);
     if (!next_state) {
-      throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::ExtendedState");
+      throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
 
     ExtendedState::Ptr mutable_next_state(new ExtendedState(*next_state));
@@ -184,7 +194,15 @@ namespace utexas_guidance {
     next_state_base = boost::static_pointer_cast<const utexas_planning::State>(mutable_next_state);
   }
 
-  // int RestrictedModel::selectBestRobotForTask(const ExtendedState& state, int destination) const {
+  utexas_planning::State::ConstPtr RestrictedModel::getStartState(long seed) const {
+    State::ConstPtr state = boost::dynamic_pointer_cast<const State>(GuidanceModel::getStartState(seed));
+    if (!state) {
+      throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
+    }
+    return ExtendedState::ConstPtr(new ExtendedState(*state));
+  }
+
+  int RestrictedModel::selectBestRobotForTask(const ExtendedState& state, int destination) const {
 
   //   std::vector<float> utility_loss(state.robots.size(), std::numeric_limits<float>::max());
   //   std::vector<float> time(state.robots.size(), std::numeric_limits<float>::max());
@@ -229,6 +247,24 @@ namespace utexas_guidance {
   //   // reach_in_time = false;
   //   return std::min_element(time.begin(), time.end()) - time.begin();
 
-  // }
+    // Just send the closest robot.
+    int min_idx = 0;
+    float min_distance = std::numeric_limits<float>::max();
+    for (int i = 0; i < state.robots.size(); ++i) {
+      float distance = getTrueDistanceTo(state.robots[i].loc_u,
+                                         state.robots[i].loc_v,
+                                         state.robots[i].loc_p,
+                                         destination,
+                                         shortest_distances_);
+      if (distance < min_distance) {
+        min_distance = distance;
+        min_idx = i;
+      }
+    }
+
+    return min_idx;
+  }
 
 } /* utexas_guidance */
+
+CLASS_LOADER_REGISTER_CLASS(utexas_guidance::RestrictedModel, utexas_planning::GenerativeModel);
