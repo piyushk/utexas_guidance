@@ -73,6 +73,7 @@ add_library(mdp
   src/mdp/restricted_model.cpp
   src/mdp/structures.cpp
   src/mdp/transition_model.cpp
+  src/mdp/visualizer.cpp
 )
 target_link_libraries(mdp
   graph
