@@ -36,14 +36,14 @@ namespace utexas_guidance {
   }
 
   void StateViewer::drawState(const State::ConstPtr& state) {
-
+    drawGraph(graph, 0.05f);
+    // Draw all humans (with assistance)
 
   }
 
   void StateViewer::drawInterpolatedState(const State::ConstPtr& state1,
                                           const State::ConstPtr& state2,
                                           float ratio) {
-
 
   }
 

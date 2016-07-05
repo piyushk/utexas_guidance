@@ -9,6 +9,9 @@
 namespace utexas_guidance {
 
   void draw(const Graph& graph,
+            float scale,
+            float linecolor[],
+            float vertexcolor[],
             bool put_all_edges,
             std::vector<std::pair<int, int> > specific_edges) {
 
@@ -29,9 +32,9 @@ namespace utexas_guidance {
           if (allow_edge) {
             Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
             glBegin(GL_LINES);
-            glColor3f(0.5, 0.5, 0.5);
-            float loc1[] = {location.get<0>()/20, location.get<1>()/20, location.get<2>()/20};
-            float loc2[] = {location2.get<0>()/20, location2.get<1>()/20, location2.get<2>()/20};
+            glColor3f(linecolor[0], linecolor[1], linecolor[2]);
+            float loc1[] = {location.get<0>() * scale, location.get<1>() * scale, location.get<2>() * scale};
+            float loc2[] = {location2.get<0>() * scale, location2.get<1>() * scale, location2.get<2>() * scale};
             glVertex3fv(loc1);
             glVertex3fv(loc2);
             glEnd();
@@ -40,14 +43,12 @@ namespace utexas_guidance {
       }
     }
 
-    glBegin(GL_POINTS);
     for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi) {
       Point3f location = graph[*vi].location;
-      glColor3f(1.0, 0.0, 0.0);
-      float loc1[] = {location.get<0>()/20, location.get<1>()/20, location.get<2>()/20};
-      glVertex3fv(loc1);
+      glTranslatef(location.get<0>() * scale, location.get<1>() * scale, location.get<2>() * scale);
+      glColor3f(vertexcolor[0], vertexcolor[1], vertexcolor[2]);
+      glutSolidSphere(radius, 10, 10);
     }
-    glEnd();
   }
 
   // void drawArrowOnImage(cv::Mat &image, const cv::Point3f &arrow_center, float orientation,
