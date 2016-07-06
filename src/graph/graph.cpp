@@ -7,6 +7,7 @@
 #include <GL/freeglut.h>
 
 #include <utexas_guidance/graph/graph.h>
+#include <utexas_guidance/common.h>
 
 namespace utexas_guidance {
 
@@ -21,7 +22,6 @@ namespace utexas_guidance {
             bool put_all_edges,
             std::vector<std::pair<int, int> > specific_edges) {
 
-    glDisable(GL_LIGHTING);
     Graph::vertex_iterator vi, vend;
     int count = 0;
     for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi, ++count) {
@@ -38,13 +38,8 @@ namespace utexas_guidance {
                                                std::make_pair(adj_vtx, count)) != specific_edges.end();
           if (allow_edge) {
             Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
-            glBegin(GL_LINES);
             glColor3f(linecolor_r, linecolor_g, linecolor_b);
-            float loc1[] = {location.get<0>() * scale, location.get<1>() * scale, location.get<2>() * scale};
-            float loc2[] = {location2.get<0>() * scale, location2.get<1>() * scale, location2.get<2>() * scale};
-            glVertex3fv(loc1);
-            glVertex3fv(loc2);
-            glEnd();
+            drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b, false, scale);
           }
         }
       }
@@ -55,14 +50,10 @@ namespace utexas_guidance {
       glPushMatrix();
       glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
       glTranslatef(location.get<0>() * scale, location.get<1>() * scale, location.get<2>() * scale);
-      glScalef(0.09f,-0.08f, location.get<2>() * scale);
-      unsigned char text[] = "text\0"; 
-      glutStrokeString(GLUT_STROKE_MONO_ROMAN, text);
-      /* glutSolidSphere(0.2f * scale, 10, 10); */
+      glutSolidSphere(0.2f * scale, 10, 10);
       glPopMatrix();
     }
 
-    glEnable(GL_LIGHTING);
   }
 
   // void drawArrowOnImage(cv::Mat &image, const cv::Point3f &arrow_center, float orientation,
