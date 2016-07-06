@@ -1,4 +1,5 @@
 #include <iostream>
+#include <GL/glut.h>
 #include <qapplication.h>
 #include <QGLViewer/qglviewer.h>
 #include <utexas_guidance/graph/graph.h>
@@ -20,9 +21,12 @@ void GraphViewer::init() {
   // Restore previous viewer state.
   restoreStateFromFile();
 
-  glDisable(GL_LIGHTING);
-  glPointSize(10.0f);
-  glLineWidth(3.0f);
+  glEnable(GL_LIGHTING);
+  // glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+  // glEnable(GL_COLOR_MATERIAL);
+  // glDisable(GL_LIGHTING);
+  // glPointSize(10.0f);
+  glLineWidth(1.0f);
   setGridIsDrawn(false);
 }
 
@@ -35,6 +39,7 @@ int main(int argc, char *argv[]) {
   utexas_guidance::readGraphFromFile(std::string(argv[1]), graph_);
 
   QApplication application(argc, argv);
+  glutInit(&argc, argv);
 
   GraphViewer viewer;
 

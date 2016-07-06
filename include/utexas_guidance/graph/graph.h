@@ -68,8 +68,12 @@ namespace utexas_guidance {
 
   void draw(const Graph& graph,
             float scale = 0.05f,
-            float linecolor[] = {0.25f, 0.25f, 0.25f},
-            float vertexcolor[] = {0.75f, 0.75f, 0.75f},
+            float linecolor_r = 0.25f,
+            float linecolor_g = 0.25f,
+            float linecolor_b = 0.25f,
+            float vertexcolor_r = 1.0f,
+            float vertexcolor_g = 0.0f,
+            float vertexcolor_b = 0.0f,
             bool put_all_edges = true,
             std::vector<std::pair<int, int> > specific_edges = std::vector<std::pair<int, int> >());
 

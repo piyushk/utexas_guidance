@@ -4,17 +4,24 @@
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/foreach.hpp>
 
+#include <GL/freeglut.h>
+
 #include <utexas_guidance/graph/graph.h>
 
 namespace utexas_guidance {
 
   void draw(const Graph& graph,
             float scale,
-            float linecolor[],
-            float vertexcolor[],
+            float linecolor_r,
+            float linecolor_g,
+            float linecolor_b,
+            float vertexcolor_r,
+            float vertexcolor_g,
+            float vertexcolor_b,
             bool put_all_edges,
             std::vector<std::pair<int, int> > specific_edges) {
 
+    glDisable(GL_LIGHTING);
     Graph::vertex_iterator vi, vend;
     int count = 0;
     for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi, ++count) {
@@ -32,7 +39,7 @@ namespace utexas_guidance {
           if (allow_edge) {
             Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
             glBegin(GL_LINES);
-            glColor3f(linecolor[0], linecolor[1], linecolor[2]);
+            glColor3f(linecolor_r, linecolor_g, linecolor_b);
             float loc1[] = {location.get<0>() * scale, location.get<1>() * scale, location.get<2>() * scale};
             float loc2[] = {location2.get<0>() * scale, location2.get<1>() * scale, location2.get<2>() * scale};
             glVertex3fv(loc1);
@@ -45,10 +52,17 @@ namespace utexas_guidance {
 
     for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi) {
       Point3f location = graph[*vi].location;
+      glPushMatrix();
+      glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
       glTranslatef(location.get<0>() * scale, location.get<1>() * scale, location.get<2>() * scale);
-      glColor3f(vertexcolor[0], vertexcolor[1], vertexcolor[2]);
-      glutSolidSphere(radius, 10, 10);
+      glScalef(0.09f,-0.08f, location.get<2>() * scale);
+      unsigned char text[] = "text\0"; 
+      glutStrokeString(GLUT_STROKE_MONO_ROMAN, text);
+      /* glutSolidSphere(0.2f * scale, 10, 10); */
+      glPopMatrix();
     }
+
+    glEnable(GL_LIGHTING);
   }
 
   // void drawArrowOnImage(cv::Mat &image, const cv::Point3f &arrow_center, float orientation,

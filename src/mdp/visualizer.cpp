@@ -2,6 +2,8 @@
 #include <utexas_guidance/mdp/visualizer.h>
 #include <utexas_planning/common/exceptions.h>
 
+#include <GL/freeglut.h>
+
 namespace utexas_guidance {
 
   StateViewer::~StateViewer() {}
@@ -35,8 +37,35 @@ namespace utexas_guidance {
     time_at_state_update_ = boost::posix_time::microsec_clock::local_time();
   }
 
+  // void StateViewer::drawRobot(float x,
+  //                             float y,
+  //                             float z,
+  //                             float color_r, 
+  //                             float color_g, 
+  //                             float color_b,
+  //                             float scale) {
+  //   
+  //   glPushMatrix();
+  //   glTranslatef(x, y, z + 1.0f);
+  //   glutSolidCylinder(0.75f, 1.0f, 20, 20);
+  //   zlocation.get<0>() * scale, location.get<1>() * scale, location.get<2>() * scale);
+  //   glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
+  //   glutSolidSphere(0.2f * scale, 10, 10);
+  //   /* glColor3f(0.9f * vertexcolor_r, 0.9f * vertexcolor_g, 0.9f * vertexcolor_b); */
+  //   /* glColor3f(0.0f, 0.0f, 0.0f); */
+  //   /* glutWireSphere(0.2f * scale, 10, 10); */
+      // glutSolidCylinder(0.5f * scale, 1.0f * scale, 10, 10);
+      // glColor3f(0.0f, 0.0f, 0.0f);
+      // glutWireCylinder(0.5f * scale, 1.0f * scale, 10, 0);
+      // glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
+      // glTranslatef(0.0f, 0.0f, 1.0f * scale);
+      // glutSolidSphere(0.5f * scale, 10, 10);
+      // glTranslatef(0.0f, 0.0f, -1.0f * scale);
+  //   glPopMatrix();
+  // } 
+
   void StateViewer::drawState(const State::ConstPtr& state) {
-    drawGraph(graph, 0.05f);
+    /* drawGraph(graph, 0.05f); */
     // Draw all humans (with assistance)
 
   }
@@ -49,9 +78,8 @@ namespace utexas_guidance {
 
   void StateViewer::init() {
     boost::mutex::scoped_lock lock(mutex_);
-    glDisable(GL_LIGHTING);
-    glPointSize(10.0f);
-    glLineWidth(3.0f);
+    /* glDisable(GL_LIGHTING); */
+    glLineWidth(1.0f);
     setGridIsDrawn(false);
   }
 
@@ -74,6 +102,7 @@ namespace utexas_guidance {
 
   void Visualizer::init(int argc, char* argv[]) {
     QApplication application(argc, argv);
+    glutInit(&argc, argv);
     viewer_.reset(new StateViewer);
     viewer_->setWindowTitle("GuidanceVisualizer");
     viewer_->show();

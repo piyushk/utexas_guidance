@@ -46,9 +46,11 @@ find_package(OpenGL REQUIRED)
 include_directories(${OpenGL_INCLUDE_DIRS})
 link_directories(${OpenGL_LIBRARY_DIRS})
 add_definitions(${OpenGL_DEFINITIONS})
-if(NOT OPENGL_FOUND)
-  message(ERROR " OPENGL not found!")
-endif(NOT OPENGL_FOUND)
+
+find_package(GLUT REQUIRED)
+include_directories(${GLUT_INCLUDE_DIRS})
+link_directories(${GLUT_LIBRARY_DIRS})
+add_definitions(${GLUT_DEFINITIONS})
 
 ## include_directories(${EIGEN3_INCLUDE_DIR})
 ## include_directories(${CLASS_LOADER_INCLUDE_DIRS})
@@ -64,6 +66,7 @@ target_link_libraries(graph
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
+  ${GLUT_LIBRARIES}
 )
 
 add_library(mdp
@@ -90,6 +93,7 @@ target_link_libraries(graph_viewer
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
+  ${GLUT_LIBRARIES}
 )
 
 add_executable(main
@@ -100,6 +104,7 @@ target_link_libraries(main
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
+  ${GLUT_LIBRARIES}
 )
 
 install(
