@@ -14,13 +14,13 @@ class GraphViewer : public QGLViewer {
 
 // Draws a spiral
 void GraphViewer::draw() {
+  glPushMatrix();
+  glScalef(0.05f, 0.05f, 0.05f);
   utexas_guidance::draw(graph_);
+  glPopMatrix();
 }
 
 void GraphViewer::init() {
-  // Restore previous viewer state.
-  restoreStateFromFile();
-
   glEnable(GL_LIGHTING);
   // glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
   // glEnable(GL_COLOR_MATERIAL);

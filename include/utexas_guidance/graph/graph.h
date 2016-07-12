@@ -67,7 +67,6 @@ namespace utexas_guidance {
                                          const Graph& graph);
 
   void draw(const Graph& graph,
-            float scale = 0.05f,
             float linecolor_r = 0.5f,
             float linecolor_g = 0.5f,
             float linecolor_b = 0.5f,

@@ -20,8 +20,7 @@ namespace utexas_guidance {
                        float line_width = 0.1f,
                        bool arrow = false,
                        bool dashed = false,
-                       float approx_dash_length = 0.5f,
-                       float scale = 1.0f) {
+                       float approx_dash_length = 0.5f) {
 
     // This is the default direction for the cylinders to face in OpenGL
     Point3f z;
@@ -57,23 +56,45 @@ namespace utexas_guidance {
     cone_width = std::max(cone_width, 2.0f * line_width);
 
     glPushMatrix();
-    glTranslatef(loc2.get<0>() * scale, loc2.get<1>() * scale, loc2.get<2>() * scale);
+    glTranslatef(loc2.get<0>(), loc2.get<1>(), loc2.get<2>());
     glRotatef(angle, t.get<0>(), t.get<1>(), t.get<2>());
     for (int i = 0; i < num_segments; i=i+2) {
       float length_reduction = 0.0f;
       if (i == num_segments - 1 && arrow) {
         length_reduction = (cone_length / cone_width) * line_width;
       }
-      glutSolidCylinder(line_width * scale, (dash_length - length_reduction) * scale, 10, 1);
-      glTranslatef(0.0f, 0.0f, 2.0f * dash_length * scale);
+      glutSolidCylinder(line_width, (dash_length - length_reduction), 10, 1);
+      glTranslatef(0.0f, 0.0f, 2.0f * dash_length);
     }
 
     if (arrow) {
-      glTranslatef(0.0f, 0.0f, -1.0f * (dash_length + cone_length) * scale);
-      glutSolidCone(cone_width * scale, cone_length * scale, 10, 1);
+      glTranslatef(0.0f, 0.0f, -1.0f * (dash_length + cone_length));
+      glutSolidCone(cone_width, cone_length, 10, 1);
     }
 
     glPopMatrix();
+
+  }
+
+
+  inline void drawRobot(const Point3f& loc
+                        float linecolor_r = 0.5f,
+                        float linecolor_g = 0.5f,
+                        float linecolor_b = 0.5f) {
+    glPushMatrix();
+    glTranslatef(loc.get<0>(), loc.get<1>(), loc.get<2>());
+
+    /* Draw Body */
+    glPushMatrix();
+    glutSolidSphere(
+    glutTranslate
+
+    displayRobotHead();
+    displayRobotBody();
+    displayRobotLeftArm();
+    displayRobotRightArm();
+    displayRobotLeftLeg();
+    displayRobotRightLeg();
 
   }
 
