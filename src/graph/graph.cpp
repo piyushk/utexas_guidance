@@ -39,7 +39,7 @@ namespace utexas_guidance {
           if (allow_edge) {
             Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
             glColor3f(linecolor_r, linecolor_g, linecolor_b);
-            drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b, false, scale);
+            drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b, 0.1f, false, false, 0.5f, scale);
           }
         }
       }
