@@ -52,6 +52,12 @@ namespace utexas_guidance {
   }
 
   void StateViewer::drawState(const State::ConstPtr& state) {
+  }
+
+  void StateViewer::drawInterpolatedState(const State::ConstPtr& state1,
+                                          const State::ConstPtr& state2,
+                                          float ratio) {
+
     drawGraph(graph_);
 
     Point3f robot_offset(0.5f, -0.25f, -0.25f);
@@ -85,17 +91,23 @@ namespace utexas_guidance {
       Point3f robot_loc = getLocation(rq.loc_prev, rq.loc_node, rq.loc_p);
       boost::geometry::add_point(robot_loc, robot_offset);
 
+      float color_r = 0.0f;
+      float color_g = 1.0f;
+      float color_b = 0.0f;
+      if (rb.help_destination != NONE) {
+        if 
+
+      }
+
+
       bool real_dest_arrow_dashed = rb.help_destination != NONE;
+
+      /* Draw real 
       bool draw_assign_arrow = rb.help_destination != NONE && !rb.is_leading_person &&
 
 
+
     }
-
-  }
-
-  void StateViewer::drawInterpolatedState(const State::ConstPtr& state1,
-                                          const State::ConstPtr& state2,
-                                          float ratio) {
 
   }
 
