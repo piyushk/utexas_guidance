@@ -21,106 +21,43 @@ namespace utexas_guidance {
             bool put_all_edges,
             std::vector<std::pair<int, int> > specific_edges) {
 
-    displayRobot();
-    // Graph::vertex_iterator vi, vend;
-    // int count = 0;
-    // for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi, ++count) {
-    //   Point3f location = graph[*vi].location;
-    //   // Draw the edges from this vertex
-    //   std::vector<int> adj_vertices;
-    //   getAdjacentVertices(count, graph, adj_vertices);
-    //   BOOST_FOREACH(int adj_vtx, adj_vertices) {
-    //     if (adj_vtx > count) {
-    //       bool allow_edge = put_all_edges;
-    //       allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
-    //                                            std::make_pair(count, adj_vtx)) != specific_edges.end();
-    //       allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
-    //                                            std::make_pair(adj_vtx, count)) != specific_edges.end();
-    //       if (allow_edge) {
-    //         Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
-    //         glColor3f(linecolor_r, linecolor_g, linecolor_b);
-    //         drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b);
-    //       }
-    //     }
-    //   }
-    // }
+    glPushAttrib(GL_CURRENT_BIT);
 
-    // for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi) {
-    //   Point3f location = graph[*vi].location;
-    //   glPushMatrix();
-    //   glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
-    //   glTranslatef(location.get<0>(), location.get<1>(), location.get<2>());
-    //   glutSolidSphere(0.2f, 10, 10);
-    //   glPopMatrix();
-    // }
+    Graph::vertex_iterator vi, vend;
+    int count = 0;
+    for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi, ++count) {
+      Point3f location = graph[*vi].location;
+      // Draw the edges from this vertex
+      std::vector<int> adj_vertices;
+      getAdjacentVertices(count, graph, adj_vertices);
+      BOOST_FOREACH(int adj_vtx, adj_vertices) {
+        if (adj_vtx > count) {
+          bool allow_edge = put_all_edges;
+          allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
+                                               std::make_pair(count, adj_vtx)) != specific_edges.end();
+          allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
+                                               std::make_pair(adj_vtx, count)) != specific_edges.end();
+          if (allow_edge) {
+            Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
+            glColor3f(linecolor_r, linecolor_g, linecolor_b);
+            drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b);
+          }
+        }
+      }
+    }
+
+    for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi) {
+      Point3f location = graph[*vi].location;
+      glPushMatrix();
+      glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
+      glTranslatef(location.get<0>(), location.get<1>(), location.get<2>());
+      glutSolidSphere(0.2f, 10, 10);
+      glPopMatrix();
+    }
+
+    glPopAttrib();
 
   }
-
-  // void drawArrowOnImage(cv::Mat &image, const cv::Point3f &arrow_center, float orientation,
-  //                       const cv::Scalar &color, int size, int thickness) {
-
-  //   cv::Point arrow_start = arrow_center +
-  //     cv::Point3f(size * cosf(orientation + M_PI/2),
-  //                 size * sinf(orientation + M_PI/2));
-  //   cv::Point arrow_end = arrow_center -
-  //     cv::Point3f(size * cosf(orientation + M_PI/2),
-  //                 size * sinf(orientation + M_PI/2));
-
-  //   cv::line(image, arrow_start, arrow_end, color, thickness, CV_AA);
-
-  //   // http://mlikihazar.blogspot.com/2013/02/draw-arrow-opencv.html
-  //   cv::Point p(arrow_start), q(arrow_end);
-
-  //   //Draw the first segment
-  //   float angle = atan2f(p.y - q.y, p.x - q.x);
-  //   p.x = (int) (q.x + (size/2 - 1) * cos(angle + M_PI/4));
-  //   p.y = (int) (q.y + (size/2 - 1) * sin(angle + M_PI/4));
-  //   cv::line(image, p, q, color, thickness, CV_AA);
-
-  //   //Draw the second segment
-  //   p.x = (int) (q.x + (size/2 + 1) * cos(angle - M_PI/4));
-  //   p.y = (int) (q.y + (size/2 + 1) * sin(angle - M_PI/4));
-  //   cv::line(image, p, q, color, thickness, CV_AA);
-
-  // }
-
-  // void drawArrowOnGraph(cv::Mat &image, const Graph& graph,
-  //     std::pair<int, float> arrow, uint32_t map_width, uint32_t map_height,
-  //     cv::Scalar color, uint32_t orig_x, uint32_t orig_y) {
-
-  //   float orientation = arrow.second;
-  //   Point3f loc = getLocationFromGraphId(arrow.first, graph);
-  //   cv::Point node_loc(loc.x + orig_x, loc.y + orig_y);
-  //   cv::Point map_center(orig_x + map_width / 2, orig_y + map_height / 2);
-
-  //   cv::Point arrow_center_1 = node_loc +
-  //     cv::Point(25 * cosf(orientation), 25 * sinf(orientation));
-  //   cv::Point arrow_center_2 = node_loc -
-  //     cv::Point(25 * cosf(orientation), 25 * sinf(orientation));
-  //   cv::Point arrow_center = (boost::geometry::distance(arrow_center_2, map_center) <
-  //       boost::geometry::distance(arrow_center_1, map_center)) ? arrow_center_2 :
-  //     arrow_center_1;
-
-  //   drawArrowOnImage(image, arrow_center, orientation, color, 20, 3);
-
-  // }
-
-  // void drawCircleOnGraph(cv::Mat &image, const Graph& graph,
-  //     int node, cv::Scalar color,
-  //     uint32_t orig_x, uint32_t orig_y) {
-  //   Point3f loc = getLocationFromGraphId(node, graph);
-  //   cv::Point circle_loc(loc.x + orig_x, loc.y + orig_y);
-  //   cv::circle(image, circle_loc, 15, color, 2, CV_AA);
-  // }
-
-  // void drawSquareOnGraph(cv::Mat &image, const Graph& graph,
-  //     int node, cv::Scalar color,
-  //     uint32_t orig_x, uint32_t orig_y, int size, int thickness) {
-  //   Point3f loc = getLocationFromGraphId(node, graph);
-  //   cv::Point square_loc(loc.x + orig_x, loc.y + orig_y);
-  //   cv::Rect rect(square_loc.x - size/2, square_loc.y - size/2, size, size);
-  //   cv::rectangle(image, rect, color, thickness, CV_AA);
-  // }
 
   void writeGraphToFile(const std::string &filename, const Graph& graph) {
 

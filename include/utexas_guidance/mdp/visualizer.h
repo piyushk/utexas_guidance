@@ -4,6 +4,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include <boost/thread.hpp>
 #include <QGLViewer/qglviewer.h>
+#include <utexas_guidance/graph/graph.h>
 #include <utexas_guidance/mdp/structures.h>
 #include <utexas_planning/core/visualizer.h>
 #include <qapplication.h>
@@ -28,6 +29,9 @@ namespace utexas_guidance {
       virtual void drawInterpolatedState(const State::ConstPtr& state1,
                                          const State::ConstPtr& state2,
                                          float ratio);
+      void initializeGraph(const Graph& graph);
+
+      Graph graph_;
 
       boost::mutex mutex_;
       State::ConstPtr current_state_;
@@ -54,6 +58,8 @@ namespace utexas_guidance {
       virtual void exec();
 
     protected:
+
+      void initializeGraph(const Graph);
 
       StateViewer::Ptr viewer_;
       boost::shared_ptr<QApplication> application_;

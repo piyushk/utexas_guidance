@@ -55,6 +55,9 @@ namespace utexas_guidance {
     float cone_width = cone_length / 2.0f;
     cone_width = std::max(cone_width, 2.0f * line_width);
 
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(color_r, color_g, color_b);
+
     glPushMatrix();
     glTranslatef(loc2.get<0>(), loc2.get<1>(), loc2.get<2>());
     glRotatef(angle, t.get<0>(), t.get<1>(), t.get<2>());
@@ -73,31 +76,43 @@ namespace utexas_guidance {
     }
 
     glPopMatrix();
+    glPopAttrib();
 
   }
 
+  inline void drawRobot(const Point3f& loc,
+                        float color_r = 0.5f,
+                        float color_g = 0.5f,
+                        float color_b = 0.5f) {
 
-  inline void drawRobot(const Point3f& loc
-                        float linecolor_r = 0.5f,
-                        float linecolor_g = 0.5f,
-                        float linecolor_b = 0.5f) {
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(color_r, color_g, color_b);
+
     glPushMatrix();
     glTranslatef(loc.get<0>(), loc.get<1>(), loc.get<2>());
+    glutSolidCube(0.5f);
 
-    /* Draw Body */
-    glPushMatrix();
-    glutSolidSphere(
-    glutTranslate
-
-    displayRobotHead();
-    displayRobotBody();
-    displayRobotLeftArm();
-    displayRobotRightArm();
-    displayRobotLeftLeg();
-    displayRobotRightLeg();
+    glPopMatrix();
+    glPopAttrib();
 
   }
 
+  inline void drawPerson(const Point3f& loc,
+                        float color_r = 0.5f,
+                        float color_g = 0.5f,
+                        float color_b = 0.5f) {
+
+    glPushAttrib(GL_CURRENT_BIT);
+    glColor3f(color_r, color_g, color_b);
+
+    glPushMatrix();
+    glTranslatef(loc.get<0>(), loc.get<1>(), loc.get<2>());
+    glutSolidSphere(0.5f, 10, 10);
+
+    glPopMatrix();
+    glPopAttrib();
+
+  }
 } /* utexas_guidance */
 
 #endif /* end of include guard: UTEXAS_GUIDANCE_COMMON_H */
