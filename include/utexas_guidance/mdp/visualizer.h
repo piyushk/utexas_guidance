@@ -25,6 +25,8 @@ namespace utexas_guidance {
 
     protected:
 
+      Point3f getLocation(int loc_u, int loc_v, float loc_p);
+      Point3f StateViewer::getInterpolatedLocation(const Point3f& loc1, const Point3f& loc2, float ratio);
       virtual void drawState(const State::ConstPtr& state);
       virtual void drawInterpolatedState(const State::ConstPtr& state1,
                                          const State::ConstPtr& state2,

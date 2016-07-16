@@ -37,7 +37,7 @@ namespace utexas_guidance {
     time_at_state_update_ = boost::posix_time::microsec_clock::local_time();
   }
 
-  Point3f StateViewer::getLocation(int loc_u, int loc_p, float loc_p) {
+  Point3f StateViewer::getLocation(int loc_u, int loc_v, float loc_p) {
     Point3f loc1 = getLocationFromGraphId(loc_u, graph_);
     Point3f loc2 = getLocationFromGraphId(loc_v, graph_);
     return getInterpolatedLocation(loc1, loc2, loc_p);
@@ -52,6 +52,7 @@ namespace utexas_guidance {
   }
 
   void StateViewer::drawState(const State::ConstPtr& state) {
+    drawInterpolatedState(state, state, 0.0f);
   }
 
   void StateViewer::drawInterpolatedState(const State::ConstPtr& state1,
@@ -68,7 +69,25 @@ namespace utexas_guidance {
       const RequestState& rq = state->requests[request_idx];
       Point3f request_loc = getLocation(rq.loc_prev, rq.loc_node, rq.loc_p);
       Point3f human_loc = request_loc;
+
+      if (ratio != 0.0f) {
+        Point3f human2_loc = getLocationFromGraphId(rq.dest, graph_);
+        for (unsigned int request_idx2 = request_idx; request_idx2 > 0; --request2_idx) {
+          if (request2_idx >= state2->requests.size()) {
+            continue;
+          }
+          
+          const RequestState& rq2 = state2->requests[request_idx2];
+          if (rq2.request_id == rq.request_id) {
+            human2_loc = getLocation(rq2.loc_prev, rq2.loc_node, rq2.loc_p);
+            break;
+          }
+        }
+        human_loc = getInterpolatedLocation(human_loc, human2_loc, ratio);
+      }
+
       boost::geometry::add_point(human_loc, human_offset);
+
       if (rq.assist_type == DIRECT_PERSON) {
         Point3f direct_arrow_loc = request_loc;
         boost::geometry::add_point(direct_arrow_loc, direct_arrow_offset);
@@ -88,27 +107,27 @@ namespace utexas_guidance {
 
     for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
       const RobotState& rb = state->robots[robot_idx];
-      Point3f robot_loc = getLocation(rq.loc_prev, rq.loc_node, rq.loc_p);
+      Point3f robot_loc = getLocation(rb.loc_prev, rb.loc_node, rb.loc_p);
+
+      // NOTE this is far form perfect, as we're losing information about waiting times. However, it'll be something.
+      if (ratio != 0.0f) {
+        const RobotState& rb = state2->robots[robot_idx];
+        Point3f robot2_loc = getLocation(rb2.loc_prev, rb2.loc_node, rb2.loc_p);
+        robot_loc = getInterpolatedLocation(robot_loc, robot2_loc, ratio);
+      }
+
       boost::geometry::add_point(robot_loc, robot_offset);
 
       float color_r = 0.0f;
       float color_g = 1.0f;
       float color_b = 0.0f;
       if (rb.help_destination != NONE) {
-        if 
-
+        color_g = 0.0f;
+        color_b = 1.0f;
       }
 
-
-      bool real_dest_arrow_dashed = rb.help_destination != NONE;
-
-      /* Draw real 
-      bool draw_assign_arrow = rb.help_destination != NONE && !rb.is_leading_person &&
-
-
-
+      drawRobot(robot_loc, color_r, color_g, color_b);
     }
-
   }
 
   void StateViewer::init() {

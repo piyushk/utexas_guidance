@@ -136,6 +136,7 @@ namespace utexas_guidance {
   /* RequestState */
 
   bool operator<(const RequestState& l, const RequestState& r) {
+    COMPARE(request_id);
     COMPARE(loc_node);
     COMPARE(loc_prev);
     COMPARE(loc_p);
@@ -146,7 +147,8 @@ namespace utexas_guidance {
   }
 
   bool operator==(const RequestState& l, const RequestState& r) {
-    return ((l.loc_node == r.loc_node) &&
+    return ((l.request_id == r.request_id) &&
+            (l.loc_node == r.loc_node) &&
             (l.loc_prev == r.loc_prev) &&
             (l.loc_p == r.loc_p) &&
             (l.assist_type == r.assist_type) &&
@@ -166,6 +168,7 @@ namespace utexas_guidance {
 
   std::size_t hash_value(const RequestState &rs) {
     std::size_t seed = 0;
+    boost::hash_combine(seed, rs.request_id);
     boost::hash_combine(seed, rs.loc_node);
     boost::hash_combine(seed, rs.loc_prev);
     boost::hash_combine(seed, rs.loc_p);
@@ -173,6 +176,11 @@ namespace utexas_guidance {
     boost::hash_combine(seed, rs.assist_loc);
     boost::hash_combine(seed, rs.goal);
     return seed;
+  }
+
+  int generateNewRequestId() {
+    static request_id = 0;
+    return request_id++;
   }
 
   /* State */

@@ -86,6 +86,8 @@ namespace utexas_guidance {
 
   struct RequestState {
 
+    int request_id;
+
     int loc_prev;
     int loc_node;
     float loc_p; // Identifies distance traveled by person from loc_prev to loc_node. If 1.0f, then exactly at loc_node.
@@ -101,6 +103,7 @@ namespace utexas_guidance {
   bool operator>(const RequestState& l, const RequestState& r);
   std::ostream& operator<<(std::ostream& stream, const RequestState& rq);
   std::size_t hash_value(const RequestState &rq);
+  int generateNewRequestId();
 
   class State : public utexas_planning::State {
 
