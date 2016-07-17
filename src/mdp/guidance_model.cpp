@@ -302,6 +302,13 @@ namespace utexas_guidance {
     return params_.initial_planning_time;
   }
 
+  void GuidanceModel::initializeVisualizer(const utexas_planning::Visualizer::Ptr& visualizer_base) const {
+    Visualizer::Ptr visualizer = boost::dynamic_pointer_cast<Visualizer>(visualizer_base);
+    if (visualizer) {
+      visualizer->initializeGraph(graph_);
+    } /* else do nothing, incompatible visualizer. shouldn't throw an error. */
+  }
+
 } /* utexas_guidance */
 
 CLASS_LOADER_REGISTER_CLASS(utexas_guidance::GuidanceModel, utexas_planning::GenerativeModel);

@@ -3,6 +3,7 @@
 
 #include <utexas_guidance/mdp/structures.h>
 #include <utexas_guidance/mdp/transition_model.h>
+#include <utexas_guidance/mdp/visualizer.h>
 #include <utexas_guidance/graph/graph.h>
 
 #include <utexas_planning/common/params.h>
@@ -66,6 +67,9 @@ namespace utexas_guidance {
       virtual utexas_planning::State::ConstPtr getStartState(long seed) const;
 
       virtual float getInitialTimeout() const;
+
+      virtual void initializeVisualizer(const utexas_planning::Visualizer::Ptr& visualizer) const;
+
       // virtual std::map<std::string, std::string> getParamsAsMap() const;
       // virtual utexas_planning::RewardMetrics::Ptr getRewardMetricsAtEpisodeStart() const;
 
