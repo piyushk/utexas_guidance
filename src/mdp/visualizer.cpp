@@ -1,4 +1,7 @@
 #include <class_loader/class_loader.h>
+#include <utexas_guidance/graph/graph.h>
+#include <utexas_guidance/common.h>
+#include <utexas_guidance/mdp/common.h>
 #include <utexas_guidance/mdp/visualizer.h>
 #include <utexas_planning/common/exceptions.h>
 
@@ -45,9 +48,9 @@ namespace utexas_guidance {
 
   Point3f StateViewer::getInterpolatedLocation(const Point3f& loc1, const Point3f& loc2, float ratio) {
     Point3f interpolated_loc;
-    interpolated_loc.set<0>((1.0f - ratio) * loc1.get<0> + ratio * loc2.get<0>);
-    interpolated_loc.set<1>((1.0f - ratio) * loc1.get<1> + ratio * loc2.get<1>);
-    interpolated_loc.set<2>((1.0f - ratio) * loc1.get<2> + ratio * loc2.get<2>);
+    interpolated_loc.set<0>((1.0f - ratio) * loc1.get<0>() + ratio * loc2.get<0>());
+    interpolated_loc.set<1>((1.0f - ratio) * loc1.get<1>() + ratio * loc2.get<1>());
+    interpolated_loc.set<2>((1.0f - ratio) * loc1.get<2>() + ratio * loc2.get<2>());
     return interpolated_loc;
   }
 
@@ -55,11 +58,11 @@ namespace utexas_guidance {
     drawInterpolatedState(state, state, 0.0f);
   }
 
-  void StateViewer::drawInterpolatedState(const State::ConstPtr& state1,
+  void StateViewer::drawInterpolatedState(const State::ConstPtr& state,
                                           const State::ConstPtr& state2,
                                           float ratio) {
 
-    drawGraph(graph_);
+    utexas_guidance::draw(graph_);
 
     Point3f robot_offset(0.5f, -0.25f, -0.25f);
     Point3f human_offset(0.5f, 0.25f, 0.25f);
@@ -71,12 +74,12 @@ namespace utexas_guidance {
       Point3f human_loc = request_loc;
 
       if (ratio != 0.0f) {
-        Point3f human2_loc = getLocationFromGraphId(rq.dest, graph_);
-        for (unsigned int request_idx2 = request_idx; request_idx2 > 0; --request2_idx) {
-          if (request2_idx >= state2->requests.size()) {
+        Point3f human2_loc = getLocationFromGraphId(rq.goal, graph_);
+        for (unsigned int request_idx2 = request_idx; request_idx2 > 0; --request_idx2) {
+          if (request_idx2 >= state2->requests.size()) {
             continue;
           }
-          
+
           const RequestState& rq2 = state2->requests[request_idx2];
           if (rq2.request_id == rq.request_id) {
             human2_loc = getLocation(rq2.loc_prev, rq2.loc_node, rq2.loc_p);
@@ -97,7 +100,7 @@ namespace utexas_guidance {
       }
 
       /* Draw arrow to goal. */
-      Point3f dest_loc = getLocationFromGraphId(rq.dest, graph_);
+      Point3f dest_loc = getLocationFromGraphId(rq.goal, graph_);
       boost::geometry::add_point(dest_loc, human_offset);
       drawLine(dest_loc, human_loc, 0.0f, 0.0f, 1.0f, 0.1f, true, true);
 
@@ -107,12 +110,12 @@ namespace utexas_guidance {
 
     for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
       const RobotState& rb = state->robots[robot_idx];
-      Point3f robot_loc = getLocation(rb.loc_prev, rb.loc_node, rb.loc_p);
+      Point3f robot_loc = getLocation(rb.loc_u, rb.loc_v, rb.loc_p);
 
       // NOTE this is far form perfect, as we're losing information about waiting times. However, it'll be something.
       if (ratio != 0.0f) {
-        const RobotState& rb = state2->robots[robot_idx];
-        Point3f robot2_loc = getLocation(rb2.loc_prev, rb2.loc_node, rb2.loc_p);
+        const RobotState& rb2 = state2->robots[robot_idx];
+        Point3f robot2_loc = getLocation(rb2.loc_u, rb2.loc_v, rb2.loc_p);
         robot_loc = getInterpolatedLocation(robot_loc, robot2_loc, ratio);
       }
 
@@ -121,7 +124,7 @@ namespace utexas_guidance {
       float color_r = 0.0f;
       float color_g = 1.0f;
       float color_b = 0.0f;
-      if (rb.help_destination != NONE) {
+      if (rb.help_destination != -1) {
         color_g = 0.0f;
         color_b = 1.0f;
       }
@@ -152,7 +155,7 @@ namespace utexas_guidance {
     }
   }
 
-  void initializeGraph(const Graph& graph) {
+  void StateViewer::initializeGraph(const Graph& graph) {
     graph_ = graph;
   }
 
@@ -178,7 +181,7 @@ namespace utexas_guidance {
     application_->exec();
   }
 
-  void initializeGraph(const Graph& graph) {
+  void Visualizer::initializeGraph(const Graph& graph) {
     viewer_->initializeGraph(graph);
   }
 

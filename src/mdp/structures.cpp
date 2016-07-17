@@ -179,7 +179,7 @@ namespace utexas_guidance {
   }
 
   int generateNewRequestId() {
-    static request_id = 0;
+    static int request_id = 0;
     return request_id++;
   }
 

@@ -23,16 +23,16 @@ namespace utexas_guidance {
       virtual void startEpisode(const utexas_planning::State::ConstPtr& start_state);
       virtual void updateState(const utexas_planning::State::ConstPtr& state, float timeout = 0.0f);
 
+      void initializeGraph(const Graph& graph);
+
     protected:
 
       Point3f getLocation(int loc_u, int loc_v, float loc_p);
-      Point3f StateViewer::getInterpolatedLocation(const Point3f& loc1, const Point3f& loc2, float ratio);
+      Point3f getInterpolatedLocation(const Point3f& loc1, const Point3f& loc2, float ratio);
       virtual void drawState(const State::ConstPtr& state);
       virtual void drawInterpolatedState(const State::ConstPtr& state1,
                                          const State::ConstPtr& state2,
                                          float ratio);
-      void initializeGraph(const Graph& graph);
-
       Graph graph_;
 
       boost::mutex mutex_;
@@ -59,9 +59,9 @@ namespace utexas_guidance {
       virtual void updateState(const utexas_planning::State::ConstPtr& state, float timeout = 0.0f);
       virtual void exec();
 
-    protected:
+      void initializeGraph(const Graph& graph);
 
-      void initializeGraph(const Graph);
+    protected:
 
       StateViewer::Ptr viewer_;
       boost::shared_ptr<QApplication> application_;
