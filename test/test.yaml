@@ -1,7 +1,8 @@
 models:
-  - name: utexas_guidance::GuidanceModel
-  #- name: utexas_guidance::RestrictedModel
+  - name: utexas_guidance::RestrictedModel
+    initial_num_requests: 1
     graph_file: /home/piyushk/utexas_planning/utexas_guidance/graphs/test.yaml
     task_model_file: /home/piyushk/utexas_planning/utexas_guidance/test/fixed_tasks.yaml
 planners:
   - name: utexas_planning::MCTS
+    max_depth: 150

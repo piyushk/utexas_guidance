@@ -272,9 +272,9 @@ namespace utexas_guidance {
           }
         }
         // Make sure goal is different from start.
-        state->requests[i].goal = rng.randomInt(num_vertices_);
+        state->requests[i].goal = rng.randomInt(num_vertices_ - 1);
         while (state->requests[i].goal == state->requests[i].loc_node) {
-          state->requests[i].goal = rng.randomInt(num_vertices_);
+          state->requests[i].goal = rng.randomInt(num_vertices_ - 1);
         }
       }
     }

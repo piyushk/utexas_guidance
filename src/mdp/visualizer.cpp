@@ -76,7 +76,7 @@ namespace utexas_guidance {
 
       if (ratio != 0.0f) {
         Point3f human2_loc = getLocationFromGraphId(rq.goal, graph_);
-        for (unsigned int request_idx2 = request_idx; request_idx2 >= 0; --request_idx2) {
+        for (int request_idx2 = request_idx; request_idx2 >= 0; --request_idx2) {
           if (request_idx2 >= state2->requests.size()) {
             continue;
           }

@@ -37,7 +37,7 @@ namespace utexas_guidance {
       }
     } else /* no assistance provided. */ {
       // Do nothing. Use default values for expected variance.
-      std::cout << state.loc_prev << " " << state.loc_node << std::endl;
+      /* std::cout << state.loc_prev << " " << state.loc_node << std::endl; */
       if (state.loc_prev == state.loc_node) {
 
         /* std::cout << "in here" << std::endl; */
