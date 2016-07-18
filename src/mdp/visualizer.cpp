@@ -64,9 +64,9 @@ namespace utexas_guidance {
 
     utexas_guidance::draw(graph_);
 
-    Point3f robot_offset(0.5f, -0.25f, -0.25f);
-    Point3f human_offset(0.5f, 0.25f, 0.25f);
-    Point3f direct_arrow_offset(1.0f, 0.25f, 0.25f);
+    Point3f robot_offset(-0.25f, -0.25f, 0.5f);
+    Point3f human_offset(0.25f, 0.25f, 0.5f);
+    Point3f direct_arrow_offset(0.25f, 0.25f, 1.0f);
 
     for (unsigned int request_idx = 0; request_idx < state->requests.size(); ++request_idx) {
       const RequestState& rq = state->requests[request_idx];
@@ -75,13 +75,15 @@ namespace utexas_guidance {
 
       if (ratio != 0.0f) {
         Point3f human2_loc = getLocationFromGraphId(rq.goal, graph_);
-        for (unsigned int request_idx2 = request_idx; request_idx2 > 0; --request_idx2) {
+        for (unsigned int request_idx2 = request_idx; request_idx2 >= 0; --request_idx2) {
           if (request_idx2 >= state2->requests.size()) {
             continue;
           }
 
           const RequestState& rq2 = state2->requests[request_idx2];
+          /* std::cout << rq2.request_id << " " << rq.request_id << std::endl; */
           if (rq2.request_id == rq.request_id) {
+            /* std::cout << "in" << std::endl; */
             human2_loc = getLocation(rq2.loc_prev, rq2.loc_node, rq2.loc_p);
             break;
           }
@@ -135,23 +137,28 @@ namespace utexas_guidance {
 
   void StateViewer::init() {
     boost::mutex::scoped_lock lock(mutex_);
-    /* glDisable(GL_LIGHTING); */
-    glLineWidth(1.0f);
     setGridIsDrawn(false);
+    startAnimation();
   }
 
   void StateViewer::draw() {
     boost::mutex::scoped_lock lock(mutex_);
-    boost::posix_time::ptime current_time = boost::posix_time::microsec_clock::local_time();
-    float time_since_state_update = (current_time - time_at_state_update_).total_milliseconds();
-    if (!next_state_) {
-      drawState(current_state_);
-    } else if (time_since_state_update > time_to_next_state_) {
-      current_state_ = next_state_;
-      next_state_.reset();
-      drawState(current_state_);
-    } else {
-      drawInterpolatedState(current_state_, next_state_, time_since_state_update / time_to_next_state_);
+    if (current_state_) {
+      std::cout << "drawing" << std::endl;
+      glPushMatrix();
+      glScalef(0.05f, 0.05f, 0.05f);
+      boost::posix_time::ptime current_time = boost::posix_time::microsec_clock::local_time();
+      float time_since_state_update = (current_time - time_at_state_update_).total_milliseconds() / 1000.0f;
+      if (!next_state_) {
+        drawState(current_state_);
+      } else if (time_since_state_update > time_to_next_state_) {
+        current_state_ = next_state_;
+        next_state_.reset();
+        drawState(current_state_);
+      } else {
+        drawInterpolatedState(current_state_, next_state_, time_since_state_update / time_to_next_state_);
+      }
+      glPopMatrix();
     }
   }
 
@@ -162,7 +169,7 @@ namespace utexas_guidance {
   Visualizer::~Visualizer() {}
 
   void Visualizer::init(int argc, char* argv[]) {
-    QApplication application(argc, argv);
+    application_.reset(new QApplication(argc, argv));
     glutInit(&argc, argv);
     viewer_.reset(new StateViewer);
     viewer_->setWindowTitle("GuidanceVisualizer");

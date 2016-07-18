@@ -280,6 +280,7 @@ namespace utexas_guidance {
     }
 
     for (unsigned int i = 0; i < state->requests.size(); ++i) {
+      state->requests[i].request_id = generateNewRequestId();
       state->requests[i].loc_prev = state->requests[i].loc_node;
       state->requests[i].loc_p = 1.0f;
       state->requests[i].assist_type = NONE;
