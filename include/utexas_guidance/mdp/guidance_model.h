@@ -23,7 +23,7 @@ namespace utexas_guidance {
       _(float,human_variance_multiplier,human_variance_multiplier,1.0f) \
       _(std::string,task_model,task_model,FIXED_TASK_MODEL) \
       _(std::string,task_model_file,task_model_file,"") \
-      _(float,task_time,task_time,1.0f) \
+      _(float,task_time,task_time,10.0f) \
       _(float,task_utility,task_utility,1.0f) \
       _(bool,task_at_home_base_only,task_at_home_base_only,false) /* For RandomTaskGenerationModel only. */ \
       _(int,initial_num_requests,initial_num_requests,1) /* Ignored if getStartState is not used. */ \

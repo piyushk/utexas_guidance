@@ -1,5 +1,5 @@
-#ifndef UTEXAS_GUIDANCE_COMMON_H
-#define UTEXAS_GUIDANCE_COMMON_H
+#ifndef UTEXAS_GUIDANCE_MDP_COMMON_H
+#define UTEXAS_GUIDANCE_MDP_COMMON_H
 
 #include <utexas_guidance/mdp/structures.h>
 
@@ -36,4 +36,4 @@ namespace utexas_guidance {
 
 } /* utexas_guidance */
 
-#endif /* end of include guard: UTEXAS_GUIDANCE_COMMON_H */
+#endif /* end of include guard: UTEXAS_GUIDANCE_MDP_COMMON_H */

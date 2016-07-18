@@ -120,7 +120,8 @@ namespace utexas_guidance {
                         const HumanDecisionModel::ConstPtr& human_decision_model,
                         const TaskGenerationModel::ConstPtr& task_generation_model,
                         RNG &rng,
-                        float &total_time) const;
+                        float &total_time,
+                        float max_time = 0.0f) const;
 
       virtual float getHumanSpeed() const;
       virtual float getRobotSpeed() const;

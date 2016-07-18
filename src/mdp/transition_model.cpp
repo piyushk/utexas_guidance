@@ -250,7 +250,8 @@ namespace utexas_guidance {
                     const HumanDecisionModel::ConstPtr& human_decision_model,
                     const TaskGenerationModel::ConstPtr& task_generation_model,
                     RNG &rng,
-                    float &total_time) const {
+                    float &total_time,
+                    float max_time) const {
 
     total_time = std::numeric_limits<float>::max();
     std::vector<float> human_speeds(state.requests.size());
@@ -276,6 +277,10 @@ namespace utexas_guidance {
       // std::cout << shortest_distances_[rs.loc_prev][rs.loc_node] << std::endl;
       // std::cout << human_speeds[i] << std::endl;
       total_time = std::min(total_time, time_to_dest);
+    }
+
+    if (max_time > 0.0f) {
+      total_time = std::min(max_time, total_time);
     }
 
     /* total_time now reflects when the first human is going to reach a destination node. Increment all humans by

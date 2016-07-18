@@ -306,7 +306,7 @@ namespace utexas_guidance {
   void GuidanceModel::initializeVisualizer(const utexas_planning::Visualizer::Ptr& visualizer_base) const {
     Visualizer::Ptr visualizer = boost::dynamic_pointer_cast<Visualizer>(visualizer_base);
     if (visualizer) {
-      visualizer->initializeGraph(graph_);
+      visualizer->initializeModel(graph_, motion_model_, human_decision_model_, task_generation_model_);
     } /* else do nothing, incompatible visualizer. shouldn't throw an error. */
   }
 

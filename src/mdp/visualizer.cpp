@@ -55,12 +55,13 @@ namespace utexas_guidance {
   }
 
   void StateViewer::drawState(const State::ConstPtr& state) {
-    drawInterpolatedState(state, state, 0.0f);
+    drawInterpolatedState(state, state, 0.0f, 0.0f);
   }
 
   void StateViewer::drawInterpolatedState(const State::ConstPtr& state,
                                           const State::ConstPtr& state2,
-                                          float ratio) {
+                                          float ratio,
+                                          float time) {
 
     utexas_guidance::draw(graph_);
 
@@ -95,10 +96,14 @@ namespace utexas_guidance {
 
       if (rq.assist_type == DIRECT_PERSON) {
         Point3f direct_arrow_loc = request_loc;
-        boost::geometry::add_point(direct_arrow_loc, direct_arrow_offset);
         Point3f intended_loc = getLocationFromGraphId(rq.assist_loc, graph_);
+        float distance = boost::geometry::distance(direct_arrow_loc, intended_loc);
+        intended_loc.set<0>(direct_arrow_loc.get<0>() + (1.0f / distance) * (intended_loc.get<0>() - direct_arrow_loc.get<0>()));
+        intended_loc.set<1>(direct_arrow_loc.get<1>() + (1.0f / distance) * (intended_loc.get<1>() - direct_arrow_loc.get<1>()));
+        intended_loc.set<2>(direct_arrow_loc.get<2>() + (1.0f / distance) * (intended_loc.get<2>() - direct_arrow_loc.get<2>()));
+        boost::geometry::add_point(direct_arrow_loc, direct_arrow_offset);
         boost::geometry::add_point(intended_loc, direct_arrow_offset);
-        drawLine(direct_arrow_loc, intended_loc, 0.0f, 0.0f, 1.0f, 0.1f, true);
+        drawLine(intended_loc, direct_arrow_loc, 0.0f, 0.0f, 1.0f, 0.1f, true);
       }
 
       /* Draw arrow to goal. */
@@ -114,26 +119,53 @@ namespace utexas_guidance {
       const RobotState& rb = state->robots[robot_idx];
       Point3f robot_loc = getLocation(rb.loc_u, rb.loc_v, rb.loc_p);
 
+      float color_r = 0.0f;
+      float color_g = 1.0f;
+      float color_b = 0.0f;
+      if (rb.help_destination != NONE) {
+        color_r = 0.0f;
+        color_g = 0.0f;
+        color_b = 1.0f;
+      } else if (isRobotExactlyAt(rb, rb.tau_d)) {
+        color_r = 1.0f;
+        color_g = 0.0f;
+        color_b = 0.0f;
+      }
       // NOTE this is far form perfect, as we're losing information about waiting times. However, it'll be something.
       if (ratio != 0.0f) {
-        const RobotState& rb2 = state2->robots[robot_idx];
-        Point3f robot2_loc = getLocation(rb2.loc_u, rb2.loc_v, rb2.loc_p);
-        robot_loc = getInterpolatedLocation(robot_loc, robot2_loc, ratio);
+        State interpolated_state(*state);
+        float unused_total_time;
+        RNG rng(0);
+        motion_model_->move(interpolated_state, 
+                            human_decision_model_, 
+                            task_generation_model_, 
+                            rng /* shouldn't be used for robots. */,
+                            unused_total_time,
+                            time);
+
+        const RobotState& rb2 = interpolated_state.robots[robot_idx];
+        if (rb2.help_destination == NONE) {
+          if (isRobotExactlyAt(rb2, rb2.tau_d)) {
+            color_r = 1.0f;
+            color_g = 0.0f;
+            color_b = 0.0f;
+          } else {
+            color_r = 0.0f;
+            color_g = 1.0f;
+            color_b = 0.0f;
+          }
+        }
+        robot_loc = getLocation(rb2.loc_u, rb2.loc_v, rb2.loc_p);
+
       }
 
       boost::geometry::add_point(robot_loc, robot_offset);
 
-      float color_r = 0.0f;
-      float color_g = 1.0f;
-      float color_b = 0.0f;
-      if (rb.help_destination != -1) {
-        color_g = 0.0f;
-        color_b = 1.0f;
-      }
-
       drawRobot(robot_loc, color_r, color_g, color_b);
     }
   }
+
+  void StateViewer::animate() {}
 
   void StateViewer::init() {
     boost::mutex::scoped_lock lock(mutex_);
@@ -144,7 +176,6 @@ namespace utexas_guidance {
   void StateViewer::draw() {
     boost::mutex::scoped_lock lock(mutex_);
     if (current_state_) {
-      std::cout << "drawing" << std::endl;
       glPushMatrix();
       glScalef(0.05f, 0.05f, 0.05f);
       boost::posix_time::ptime current_time = boost::posix_time::microsec_clock::local_time();
@@ -156,14 +187,23 @@ namespace utexas_guidance {
         next_state_.reset();
         drawState(current_state_);
       } else {
-        drawInterpolatedState(current_state_, next_state_, time_since_state_update / time_to_next_state_);
+        drawInterpolatedState(current_state_, 
+                              next_state_, 
+                              time_since_state_update / time_to_next_state_,
+                              time_since_state_update);
       }
       glPopMatrix();
     }
   }
 
-  void StateViewer::initializeGraph(const Graph& graph) {
+  void StateViewer::initializeModel(const Graph& graph, 
+                                    const MotionModel::ConstPtr& motion_model,
+                                    const HumanDecisionModel::ConstPtr& human_decision_model,
+                                    const TaskGenerationModel::ConstPtr& task_generation_model) {
     graph_ = graph;
+    motion_model_ = motion_model;
+    human_decision_model_ = human_decision_model;
+    task_generation_model_ = task_generation_model;
   }
 
   Visualizer::~Visualizer() {}
@@ -188,8 +228,14 @@ namespace utexas_guidance {
     application_->exec();
   }
 
-  void Visualizer::initializeGraph(const Graph& graph) {
-    viewer_->initializeGraph(graph);
+  void Visualizer::initializeModel(const Graph& graph, 
+                                   const MotionModel::ConstPtr& motion_model,
+                                   const HumanDecisionModel::ConstPtr& human_decision_model,
+                                   const TaskGenerationModel::ConstPtr& task_generation_model) {
+    viewer_->initializeModel(graph,
+                             motion_model,
+                             human_decision_model,
+                             task_generation_model);
   }
 
 } /* utexas_planning */

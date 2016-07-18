@@ -6,6 +6,7 @@
 #include <QGLViewer/qglviewer.h>
 #include <utexas_guidance/graph/graph.h>
 #include <utexas_guidance/mdp/structures.h>
+#include <utexas_guidance/mdp/transition_model.h>
 #include <utexas_planning/core/visualizer.h>
 #include <qapplication.h>
 
@@ -23,7 +24,10 @@ namespace utexas_guidance {
       virtual void startEpisode(const utexas_planning::State::ConstPtr& start_state);
       virtual void updateState(const utexas_planning::State::ConstPtr& state, float timeout = 0.0f);
 
-      void initializeGraph(const Graph& graph);
+      void initializeModel(const Graph& graph, 
+                           const MotionModel::ConstPtr& motion_model,
+                           const HumanDecisionModel::ConstPtr& human_decision_model,
+                           const TaskGenerationModel::ConstPtr& task_generation_model);
 
     protected:
 
@@ -32,7 +36,8 @@ namespace utexas_guidance {
       virtual void drawState(const State::ConstPtr& state);
       virtual void drawInterpolatedState(const State::ConstPtr& state1,
                                          const State::ConstPtr& state2,
-                                         float ratio);
+                                         float ratio,
+                                         float time);
       Graph graph_;
 
       boost::mutex mutex_;
@@ -40,8 +45,13 @@ namespace utexas_guidance {
       State::ConstPtr next_state_;
       float time_to_next_state_;
 
+      TaskGenerationModel::ConstPtr task_generation_model_;
+      MotionModel::ConstPtr motion_model_;
+      HumanDecisionModel::ConstPtr human_decision_model_;
+
       boost::posix_time::ptime time_at_state_update_;
 
+      virtual void animate();
       virtual void init();
       virtual void draw();
   };
@@ -59,7 +69,10 @@ namespace utexas_guidance {
       virtual void updateState(const utexas_planning::State::ConstPtr& state, float timeout = 0.0f);
       virtual void exec();
 
-      void initializeGraph(const Graph& graph);
+      void initializeModel(const Graph& graph, 
+                           const MotionModel::ConstPtr& motion_model,
+                           const HumanDecisionModel::ConstPtr& human_decision_model,
+                           const TaskGenerationModel::ConstPtr& task_generation_model);
 
     protected:
 
