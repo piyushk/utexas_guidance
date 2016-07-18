@@ -17,14 +17,17 @@ namespace utexas_guidance {
 
   int HumanDecisionModel::getNextNode(const RequestState& state, RNG &rng) const {
 
+    /* std::cout << "getNextNode" << std::endl; */
     // In case no help has been provided to the human, the expected direction of motion can be given by.
     float expected_direction_of_motion;
     float expected_variance;
 
     if (state.assist_type == LEAD_PERSON) {
       // Assume model is deterministic, and follows the system's assistance perfectly.
+      /* std::cout << "1" << std::endl; */
       return state.assist_loc;
     } else if (state.assist_type == DIRECT_PERSON) {
+      /* std::cout << "2" << std::endl; */
       if (!onSameFloor(state.assist_loc, state.loc_node, graph_)) {
         // Got directions to go to a different floor via an elevator, pretty obvious.
         return state.assist_loc;
@@ -34,7 +37,10 @@ namespace utexas_guidance {
       }
     } else /* no assistance provided. */ {
       // Do nothing. Use default values for expected variance.
+      std::cout << state.loc_prev << " " << state.loc_node << std::endl;
       if (state.loc_prev == state.loc_node) {
+
+        /* std::cout << "in here" << std::endl; */
         // This can only mean that this is the start state (as the person does not have loc_prev set), and the policy
         // called Wait without first calling LEAD or DIRECT, which is a terrible action since some free help went to
         // waste. Assume that the person will move completely randomly (including changing floors).
@@ -44,6 +50,7 @@ namespace utexas_guidance {
         // The person changed floors, but no assistance was provided after changing floors, the person will likely
         // go anywhere, apart from going back into the elevator.
 
+        /* std::cout << "in here2" << std::endl; */
         int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_[state.loc_node].size() - 1);
         return adjacent_vertices_on_same_floor_map_[state.loc_node][rand_idx];
       } else {
@@ -78,7 +85,7 @@ namespace utexas_guidance {
       }
       probabilities.push_back(probability);
       // std::cout << "  to " <<
-      //   adjacent_vertices_on_same_floor_map_[next_state.graph_id][probability_counter] <<
+      //   adjacent_vertices_on_same_floor_map_[state.loc_node][probability_counter] <<
       //   ": " << probability << std::endl;
     }
 
@@ -261,9 +268,10 @@ namespace utexas_guidance {
       RequestState& rs = state.requests[i];
       if (rs.loc_p == 1.0f) {
         // Choose the next node for this person
-        rs.loc_p = 0.0f;
-        rs.loc_prev = rs.loc_node;
+        int loc_prev = rs.loc_node;
         rs.loc_node = human_decision_model->getNextNode(rs, rng);
+        rs.loc_p = 0.0f;
+        rs.loc_prev = loc_prev;
       }
 
       // Figure out what pace the human is gonna move in.
