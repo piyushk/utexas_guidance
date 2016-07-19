@@ -137,7 +137,7 @@ namespace utexas_guidance {
       }
 
       reward = -(time_loss + utility_loss);
-      depth_count = lrint(time_loss);
+      depth_count = lrint(post_action_timeout);
     }
 
     next_state_base = boost::static_pointer_cast<const utexas_planning::State>(next_state);

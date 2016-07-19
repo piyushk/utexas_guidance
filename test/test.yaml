@@ -6,3 +6,4 @@ models:
 planners:
   - name: utexas_planning::MCTS
     max_depth: 150
+    uct_reward_bound: 500
