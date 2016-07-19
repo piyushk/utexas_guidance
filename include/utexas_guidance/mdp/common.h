@@ -29,6 +29,9 @@ namespace utexas_guidance {
                           const std::vector<std::vector<float> > &shortest_distances,
                           bool &shortest_path_through_u);
 
+  void getColocatedRobotRequestIds(const State& state, 
+                                   std::vector<std::pair<int, int> >& robot_request_ids);
+
   inline bool isRobotExactlyAt(const RobotState& robot, int loc) {
     return (((robot.loc_u == loc) && (robot.loc_p == 0.0f)) ||
             ((robot.loc_v == loc) && (robot.loc_p == 1.0f)));

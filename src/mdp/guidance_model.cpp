@@ -143,22 +143,6 @@ namespace utexas_guidance {
     next_state_base = boost::static_pointer_cast<const utexas_planning::State>(next_state);
   }
 
-  void GuidanceModel::getColocatedRobotRequestIds(const State& state,
-                                                  std::vector<std::pair<int, int> >& robot_request_ids) const {
-    // Figure out if there is a robot at the current position
-    for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
-      if (!(state.robots[robot_id].is_leading_person)) {
-        for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
-          if ((state.robots[robot_id].help_destination == state.requests[request_id].loc_node) &&
-              isRobotExactlyAt(state.robots[robot_id], state.requests[request_id].loc_node) &&
-              state.requests[request_id].assist_type == NONE) {
-            robot_request_ids.push_back(std::pair<int, int>(robot_id, request_id));
-          }
-        }
-      }
-    }
-  }
-
   void GuidanceModel::getActionsAtState(const utexas_planning::State::ConstPtr& state_base,
                                         std::vector<utexas_planning::Action::ConstPtr>& actions) const {
     actions.clear();
@@ -308,6 +292,10 @@ namespace utexas_guidance {
     if (visualizer) {
       visualizer->initializeModel(graph_, motion_model_, human_decision_model_, task_generation_model_);
     } /* else do nothing, incompatible visualizer. shouldn't throw an error. */
+  }
+
+  void GuidanceModel::getUnderlyingGraph(Graph& graph) const {
+    graph = graph_;
   }
 
 } /* utexas_guidance */

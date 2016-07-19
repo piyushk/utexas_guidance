@@ -1,45 +1,54 @@
-#ifndef BWI_GUIDANCE_SOLVER_MRN_SINGLE_ROBOT_SOLVER_H
-#define BWI_GUIDANCE_SOLVER_MRN_SINGLE_ROBOT_SOLVER_H
+#ifndef UTEXAS_GUIDANCE_MDP_SINGLE_ROBOT_SOLVER
+#define UTEXAS_GUIDANCE_MDP_SINGLE_ROBOT_SOLVER
 
-#include <bwi_guidance_solver/mrn/solver.h>
-#include <bwi_guidance_solver/mrn/extended_structures.h>
-#include <bwi_rl/planning/DefaultPolicy.h>
+#include <utexas_guidance/mdp/structures.h>
+#include <utexas_guidance/graph/graph.h>
 
-namespace bwi_guidance_solver {
+#include <utexas_planning/core/abstract_planner.h>
 
-  namespace mrn {
+namespace utexas_guidance {
 
-    class SingleRobotSolver : public Solver, public DefaultPolicy<ExtendedState, Action> {
+  class SingleRobotSolver : public utexas_planning::AbstractPlanner {
 
-      public:
+    public:
 
-        /* Inherited from bwi_guidance_solver::mrn::Solver */
-        virtual Action getBestAction(const ExtendedState& state);
+      typedef boost::shared_ptr<SingleRobotSolver> Ptr;
+      typedef boost::shared_ptr<const SingleRobotSolver> ConstPtr;
 
-        /* Inherited from DefaultPolicy - This function needs to be const qualified, as it is called
-         * from multi-threaded code. At the very least, it should never use rng_, which has threading
-         * issues. */
-        virtual int getBestAction(const ExtendedState& state, 
-                                  const std::vector<Action> &actions, 
-                                  const boost::shared_ptr<RNG> &rng);
+      virtual ~SingleRobotSolver();
 
-        virtual std::string getSolverName();
-        virtual bool initializeSolverSpecific(Json::Value &params);
-        virtual void resetSolverSpecific();
-        virtual void performEpisodeStartComputation(const ExtendedState &state);
-        virtual void performPostActionComputation(const ExtendedState &state, float time, bool new_action);
+      virtual void init(const utexas_planning::GenerativeModel::ConstPtr& model,
+                        const YAML::Node& params,
+                        const std::string& output_directory,
+                        const boost::shared_ptr<RNG>& rng = boost::shared_ptr<RNG>(),
+                        bool verbose = false);
 
-      private:
+      virtual void performEpisodeStartProcessing(const utexas_planning::State::ConstPtr& start_state,
+                                                 float timeout = utexas_planning::NO_TIMEOUT);
 
-        boost::shared_ptr<RNG> rng_;
-        std::vector<std::vector<std::vector<size_t> > > shortest_paths_;
-        std::vector<std::vector<float> > shortest_distances_;
-        std::map<int, std::vector<int> > adjacent_vertices_map_;
+      virtual utexas_planning::Action::ConstPtr getBestAction(const utexas_planning::State::ConstPtr& state) const;
 
-    };
+      virtual void performPreActionProcessing(const utexas_planning::State::ConstPtr& state,
+                                              const utexas_planning::Action::ConstPtr& prev_action,
+                                              float timeout = utexas_planning::NO_TIMEOUT);
 
-  } /* mrn */
+      virtual void performPostActionProcessing(const utexas_planning::State::ConstPtr& state,
+                                               const utexas_planning::Action::ConstPtr& action,
+                                               float timeout = utexas_planning::NO_TIMEOUT);
 
-} /* bwi_guidance_solver */
+      virtual std::string getName() const;
 
-#endif /* end of include guard: BWI_GUIDANCE_SOLVER_MRN_SINGLE_ROBOT_SOLVER_H */
+    private:
+
+      boost::shared_ptr<RNG> rng_;
+
+      Graph graph_;
+      std::vector<std::vector<std::vector<int> > > shortest_paths_;
+      std::vector<std::vector<float> > shortest_distances_;
+      std::vector<std::vector<int> > adjacent_vertices_map_;
+
+  };
+
+} /* utexas_guidance */
+
+#endif /* end of include guard: UTEXAS_GUIDANCE_MDP_SINGLE_ROBOT_SOLVER */

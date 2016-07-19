@@ -74,6 +74,7 @@ add_library(mdp
   src/mdp/extended_structures.cpp
   src/mdp/guidance_model.cpp
   src/mdp/restricted_model.cpp
+  src/mdp/single_robot_solver.cpp
   src/mdp/structures.cpp
   src/mdp/transition_model.cpp
   src/mdp/visualizer.cpp

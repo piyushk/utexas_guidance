@@ -69,15 +69,12 @@ namespace utexas_guidance {
       virtual float getInitialTimeout() const;
 
       virtual void initializeVisualizer(const utexas_planning::Visualizer::Ptr& visualizer) const;
+      virtual void getUnderlyingGraph(Graph& graph) const;
 
       // virtual std::map<std::string, std::string> getParamsAsMap() const;
       // virtual utexas_planning::RewardMetrics::Ptr getRewardMetricsAtEpisodeStart() const;
 
     protected:
-
-      /* Some private helper functions. */
-      void getColocatedRobotRequestIds(const State& state, std::vector<std::pair<int, int> >& robot_request_ids) const;
-      void getActionsAtState(const State &state, std::vector<Action>& actions);
 
       /* Some cached data. */
       std::vector<std::vector<std::vector<int> > > shortest_paths_;

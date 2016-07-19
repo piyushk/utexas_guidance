@@ -39,5 +39,22 @@ namespace utexas_guidance {
     return (shortest_path_through_u) ? distance_from_u : distance_from_v;
   }
 
+  void getColocatedRobotRequestIds(const State& state,
+                                   std::vector<std::pair<int, int> >& robot_request_ids) {
+
+    // Figure out if there is a robot at the current position
+    for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+      if (!(state.robots[robot_id].is_leading_person)) {
+        for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
+          if ((state.robots[robot_id].help_destination == state.requests[request_id].loc_node) &&
+              isRobotExactlyAt(state.robots[robot_id], state.requests[request_id].loc_node) &&
+              state.requests[request_id].assist_type == NONE) {
+            robot_request_ids.push_back(std::pair<int, int>(robot_id, request_id));
+          }
+        }
+      }
+    }
+
+  }
 
 } /* utexas_guidance */
