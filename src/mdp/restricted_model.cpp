@@ -72,6 +72,9 @@ namespace utexas_guidance {
           lead_or_direct_action_available = true;
         }
       }
+      if (lead_or_direct_action_available) {
+        break;
+      }
     }
 
     // Disallow other actions until it's decided how to help a colocated human.
@@ -84,6 +87,23 @@ namespace utexas_guidance {
     actions.resize(action_counter + state->robots.size());
     int assigned_robots = 0;
     std::vector<bool> assignable_locations(num_vertices_, false);
+
+    for (unsigned int robot = 0; robot < state->robots.size(); ++robot) {
+      if (state->robots[robot].help_destination == NONE) {
+        if (state->robots[robot].loc_p != 1.0f) {
+          assignable_locations[state->robots[robot].loc_u] = true;
+          for (unsigned int adj = 0; adj < adjacent_vertices_map_[state->robots[robot].loc_u].size(); ++adj) {
+            assignable_locations[adjacent_vertices_map_[state->robots[robot].loc_u][adj]] = true;
+          }
+        }
+        if (state->robots[robot].loc_p != 0.0f) {
+          assignable_locations[state->robots[robot].loc_v] = true;
+          for (unsigned int adj = 0; adj < adjacent_vertices_map_[state->robots[robot].loc_v].size(); ++adj) {
+            assignable_locations[adjacent_vertices_map_[state->robots[robot].loc_v][adj]] = true;
+          }
+        }
+      }
+    }
 
     for (unsigned int robot = 0; robot < state->robots.size(); ++robot) {
       if (state->robots[robot].help_destination != NONE) {
@@ -195,13 +215,29 @@ namespace utexas_guidance {
       mutable_next_state->assigned_robots = state->assigned_robots;
       if (action->type == RELEASE_ROBOT) {
         mutable_next_state->released_locations.push_back(state->robots[action->robot_id].help_destination);
-        if (std::find(unhelpful_robots.begin(), unhelpful_robots.end(), action->robot_id) != unhelpful_robots.end()) {
-
+        std::vector<int>::iterator unhelpful_robot_it = std::find(mutable_next_state->unhelpful_robots.begin(), 
+                                                                  mutable_next_state->unhelpful_robots.end(), 
+                                                                  action->robot_id);
+        if (unhelpful_robot_it != mutable_next_state->unhelpful_robots.end()) {
+          reward -= 10.0f;
+          mutable_next_state->unhelpful_robots.erase(unhelpful_robot_it);
         }
-        unhelpful_robots.erase((mutable_action->robot_id);
       } else if (action->type == ASSIGN_ROBOT) {
         mutable_next_state->assigned_robots.push_back(mutable_action->robot_id);
-        unhelpful_robots.push_back(mutable_action->robot_id);
+        mutable_next_state->unhelpful_robots.push_back(mutable_action->robot_id);
+      } else if (action->type == LEAD_PERSON || action->type == DIRECT_PERSON) {
+        std::vector<int>::iterator assigned_robot_it = std::find(mutable_next_state->assigned_robots.begin(), 
+                                                                  mutable_next_state->assigned_robots.end(), 
+                                                                  action->robot_id);
+        if (assigned_robot_it != mutable_next_state->assigned_robots.end()) {
+          mutable_next_state->assigned_robots.erase(assigned_robot_it);
+        }
+        std::vector<int>::iterator unhelpful_robot_it = std::find(mutable_next_state->unhelpful_robots.begin(), 
+                                                                  mutable_next_state->unhelpful_robots.end(), 
+                                                                  action->robot_id);
+        if (unhelpful_robot_it != mutable_next_state->unhelpful_robots.end()) {
+          mutable_next_state->unhelpful_robots.erase(unhelpful_robot_it);
+        }
       }
     }
 
