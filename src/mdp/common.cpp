@@ -48,7 +48,8 @@ namespace utexas_guidance {
         for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
           if ((state.robots[robot_id].help_destination == state.requests[request_id].loc_node) &&
               isRobotExactlyAt(state.robots[robot_id], state.requests[request_id].loc_node) &&
-              state.requests[request_id].assist_type == NONE) {
+              (state.requests[request_id].loc_p == 1.0f) &&
+              (state.requests[request_id].assist_type == NONE)) {
             robot_request_ids.push_back(std::pair<int, int>(robot_id, request_id));
           }
         }

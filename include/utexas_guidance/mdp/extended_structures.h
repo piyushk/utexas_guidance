@@ -21,10 +21,10 @@ namespace utexas_guidance {
     virtual bool operator==(const utexas_planning::State& other) const;
     virtual std::size_t hash() const;
 
-    /* Some additional information is tacked onto the state instead of adding heuristics into every solver. */
-    Action prev_action;
+    std::vector<int> assigned_robots;
     /* Locations that have been released since the last Wait action. No robot can be assigned to these locations. */
     std::vector<int> released_locations;
+    std::vector<int> unhelpful_robots;
 
   private:
 
@@ -35,10 +35,9 @@ namespace utexas_guidance {
       ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(State);
       ar & BOOST_SERIALIZATION_NVP(requests);
       ar & BOOST_SERIALIZATION_NVP(robots);
-      ar & BOOST_SERIALIZATION_NVP(prev_action.type);
-      ar & BOOST_SERIALIZATION_NVP(prev_action.robot_id);
-      ar & BOOST_SERIALIZATION_NVP(prev_action.node);
+      ar & BOOST_SERIALIZATION_NVP(assigned_robots);
       ar & BOOST_SERIALIZATION_NVP(released_locations);
+      ar & BOOST_SERIALIZATION_NVP(unhelpful_robots);
     }
 
   };

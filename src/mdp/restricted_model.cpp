@@ -28,15 +28,18 @@ namespace utexas_guidance {
     }
 
     // Heuristic 3: Compute which actions are allowed given a strict ordering.
-    bool direct_person_allowed = !restricted_model_params_.h3_restrict_ordering ||
-      (state->prev_action.type == WAIT || state->prev_action.type == DIRECT_PERSON);
-    bool lead_person_allowed = direct_person_allowed || state->prev_action.type == LEAD_PERSON;
-    bool release_robot_allowed = lead_person_allowed || state->prev_action.type == RELEASE_ROBOT;
+    bool direct_person_allowed = true;
+    // !restricted_model_params_.h3_restrict_ordering ||
+    //   (state->prev_action.type == WAIT || state->prev_action.type == DIRECT_PERSON);
+    bool lead_person_allowed = true;
+    /* direct_person_allowed || state->prev_action.type == LEAD_PERSON; */
+    bool release_robot_allowed = true;
+    /* lead_person_allowed || state->prev_action.type == RELEASE_ROBOT; */
     bool assign_robot_allowed = true;
     bool wait_allowed = true;
 
     // Heuristic 2: Set the max number of assignable locations.
-    bool max_assigned_robots = restricted_model_params_.h2_max_assigned_robots;
+    int max_assigned_robots = restricted_model_params_.h2_max_assigned_robots;
     if (max_assigned_robots == MAX_ASSIGNED_ROBOTS_NOLIMIT) {
       max_assigned_robots = state->robots.size();
     } else if (max_assigned_robots == MAX_ASSIGNED_ROBOTS_SAME_AS_REQUESTS) {
@@ -80,7 +83,8 @@ namespace utexas_guidance {
 
     actions.resize(action_counter + state->robots.size());
     int assigned_robots = 0;
-    std::vector<bool> assignable_locations(num_vertices_, true);
+    std::vector<bool> assignable_locations(num_vertices_, false);
+
     for (unsigned int robot = 0; robot < state->robots.size(); ++robot) {
       if (state->robots[robot].help_destination != NONE) {
         assigned_robots += 1;
@@ -89,7 +93,8 @@ namespace utexas_guidance {
           assignable_locations[state->robots[robot].help_destination] = false;
         }
         if (release_robot_allowed) {
-          if (!(state->robots[robot].is_leading_person)) {
+          if (!(state->robots[robot].is_leading_person) &&
+              std::find(state->assigned_robots.begin(), state->assigned_robots.end(), robot) == state->assigned_robots.end()) {
             actions[action_counter] = Action::Ptr(new Action(RELEASE_ROBOT, robot));
             ++action_counter;
           }
@@ -181,13 +186,22 @@ namespace utexas_guidance {
     }
 
     ExtendedState::Ptr mutable_next_state(new ExtendedState(*next_state));
-    mutable_next_state->prev_action = *action;
+    mutable_next_state->unhelpful_robots = state->unhelpful_robots;
     if (action->type == WAIT) {
       mutable_next_state->released_locations.clear();
+      mutable_next_state->assigned_robots.clear();
     } else {
       mutable_next_state->released_locations = state->released_locations;
+      mutable_next_state->assigned_robots = state->assigned_robots;
       if (action->type == RELEASE_ROBOT) {
         mutable_next_state->released_locations.push_back(state->robots[action->robot_id].help_destination);
+        if (std::find(unhelpful_robots.begin(), unhelpful_robots.end(), action->robot_id) != unhelpful_robots.end()) {
+
+        }
+        unhelpful_robots.erase((mutable_action->robot_id);
+      } else if (action->type == ASSIGN_ROBOT) {
+        mutable_next_state->assigned_robots.push_back(mutable_action->robot_id);
+        unhelpful_robots.push_back(mutable_action->robot_id);
       }
     }
 
@@ -251,14 +265,16 @@ namespace utexas_guidance {
     int min_idx = 0;
     float min_distance = std::numeric_limits<float>::max();
     for (int i = 0; i < state.robots.size(); ++i) {
-      float distance = getTrueDistanceTo(state.robots[i].loc_u,
-                                         state.robots[i].loc_v,
-                                         state.robots[i].loc_p,
-                                         destination,
-                                         shortest_distances_);
-      if (distance < min_distance) {
-        min_distance = distance;
-        min_idx = i;
+      if (state.robots[i].help_destination == NONE) {
+        float distance = getTrueDistanceTo(state.robots[i].loc_u,
+                                           state.robots[i].loc_v,
+                                           state.robots[i].loc_p,
+                                           destination,
+                                           shortest_distances_);
+        if (distance < min_distance) {
+          min_distance = distance;
+          min_idx = i;
+        }
       }
     }
 

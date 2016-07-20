@@ -300,7 +300,7 @@ namespace utexas_guidance {
 
       // Atleast one of the following should be 1, but no real need to check that.
       if (rs.loc_p > 1.0f - 1e-6f) {
-        rs.loc_p == 1.0f;
+        rs.loc_p = 1.0f;
         rs.assist_type = NONE;
         rs.assist_loc = NONE;
       }

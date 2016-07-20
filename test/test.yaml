@@ -8,4 +8,4 @@ planners:
   # - name: utexas_guidance::SingleRobotSolver
     default_policy: utexas_guidance::SingleRobotSolver
     max_depth: 150
-    uct_reward_bound: 500
+    uct_reward_bound: 1000
