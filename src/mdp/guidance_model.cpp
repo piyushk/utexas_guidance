@@ -36,7 +36,9 @@ namespace utexas_guidance {
     /* Initialize all graphs and models. */
     // TODO Test for graph and task allocation file here.
     readGraphFromFile(params_.graph_file, graph_);
-    human_decision_model_.reset(new HumanDecisionModel(graph_, params_.human_variance_multiplier));
+    human_decision_model_.reset(new HumanDecisionModel(graph_, 
+                                                       params_.is_deterministic,
+                                                       params_.human_variance_multiplier));
     if (params_.task_model == FIXED_TASK_MODEL) {
       task_generation_model_.reset(new FixedTaskGenerationModel(params_.task_model_file,
                                                                 params_.task_utility,

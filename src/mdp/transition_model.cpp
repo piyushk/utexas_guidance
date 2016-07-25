@@ -7,8 +7,12 @@
 
 namespace utexas_guidance {
 
-  HumanDecisionModel::HumanDecisionModel(const Graph& graph, float decision_variance_multiplier) :
-      graph_(graph), decision_variance_multiplier_(decision_variance_multiplier) {
+  HumanDecisionModel::HumanDecisionModel(const Graph& graph, 
+                                         bool is_deterministic,
+                                         float decision_variance_multiplier) :
+      graph_(graph), 
+      is_deterministic_(is_deterministic),
+      decision_variance_multiplier_(decision_variance_multiplier) {
     getAllAdjacentVertices(adjacent_vertices_map_, graph_);
     getAllAdjacentVerticesOnSameFloor(adjacent_vertices_on_same_floor_map_, graph_);
   }
@@ -44,14 +48,22 @@ namespace utexas_guidance {
         // This can only mean that this is the start state (as the person does not have loc_prev set), and the policy
         // called Wait without first calling LEAD or DIRECT, which is a terrible action since some free help went to
         // waste. Assume that the person will move completely randomly (including changing floors).
-        int rand_idx = rng.randomInt(adjacent_vertices_map_[state.loc_node].size() - 1);
+        // Pseudo-random for different graph id, but deterministic given a graph id.
+        int rand_idx = state.loc_node % adjacent_vertices_map_[state.loc_node].size();
+        if (!is_deterministic_) {
+          rand_idx = rng.randomInt(adjacent_vertices_map_[state.loc_node].size() - 1);
+        }
         return adjacent_vertices_map_[state.loc_node][rand_idx];
       } else if (!onSameFloor(state.loc_prev, state.loc_node, graph_)) {
         // The person changed floors, but no assistance was provided after changing floors, the person will likely
         // go anywhere, apart from going back into the elevator.
 
         /* std::cout << "in here2" << std::endl; */
-        int rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_[state.loc_node].size() - 1);
+        // Pseudo-random for different graph id, but deterministic given a graph id.
+        int rand_idx = state.loc_node % adjacent_vertices_on_same_floor_map_[state.loc_node].size();
+        if (!is_deterministic_) {
+          rand_idx = rng.randomInt(adjacent_vertices_on_same_floor_map_[state.loc_node].size() - 1);
+        }
         return adjacent_vertices_on_same_floor_map_[state.loc_node][rand_idx];
       } else {
         expected_direction_of_motion = getNodeAngle(state.loc_prev, state.loc_node, graph_);
@@ -74,21 +86,32 @@ namespace utexas_guidance {
 
     float probability_sum = 0;
     std::vector<float> probabilities;
+
+    float max_probability = 0;
+    int max_probability_idx = 0;
     /* std::cout << "Transition probabilities: " << std::endl; */
     for (size_t probability_counter = 0; probability_counter < weights.size(); ++probability_counter) {
       /* std::cout << weights[probability_counter] << " " << weight_sum << std::endl; */
       double probability = 0.99 * (weights[probability_counter] / weight_sum) + 0.01 * (1.0f / weights.size());
       probability_sum += probability;
-      if (probability_counter == weights.size() - 1) {
+      if (probability_counter == (weights.size() - 1)) {
         // Account for floating point errors. No surprises!
         probability += 1.0f - probability_sum;
       }
       probabilities.push_back(probability);
+
+      if (probability > max_probability) {
+        max_probability = probability;
+        max_probability_idx = probability_counter;
+      }
       // std::cout << "  to " <<
       //   adjacent_vertices_on_same_floor_map_[state.loc_node][probability_counter] <<
       //   ": " << probability << std::endl;
     }
 
+    if (is_deterministic_) {
+      return adjacent_vertices_on_same_floor_map_[state.loc_node][max_probability_idx];
+    } 
     return adjacent_vertices_on_same_floor_map_[state.loc_node][rng.select(probabilities)];
   }
 

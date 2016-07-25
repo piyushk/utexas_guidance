@@ -18,7 +18,9 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<HumanDecisionModel> Ptr;
       typedef boost::shared_ptr<const HumanDecisionModel> ConstPtr;
 
-      HumanDecisionModel(const utexas_guidance::Graph& graph, float decision_variance_multiplier = 1.0f);
+      HumanDecisionModel(const utexas_guidance::Graph& graph, 
+                         bool is_deterministic = false,
+                         float decision_variance_multiplier = 1.0f);
       virtual ~HumanDecisionModel();
 
       virtual int getNextNode(const RequestState& state, RNG &rng) const;
@@ -26,10 +28,11 @@ namespace utexas_guidance {
     private:
 
       utexas_guidance::Graph graph_;
-      std::vector<std::vector<int> > adjacent_vertices_map_;
-      std::vector<std::vector<int> > adjacent_vertices_on_same_floor_map_;
+      bool is_deterministic_;
       float decision_variance_multiplier_;
 
+      std::vector<std::vector<int> > adjacent_vertices_map_;
+      std::vector<std::vector<int> > adjacent_vertices_on_same_floor_map_;
   };
 
   class TaskGenerationModel {
