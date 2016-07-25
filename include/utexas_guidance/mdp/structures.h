@@ -56,11 +56,6 @@ namespace utexas_guidance {
 
   };
 
-  bool operator==(const Action& l, const Action& r);
-  bool operator<(const Action& l, const Action& r);
-  bool operator>(const Action& l, const Action& r);
-  std::ostream& operator<<(std::ostream& stream, const Action& a);
-
   /* States */
   struct RobotState {
 

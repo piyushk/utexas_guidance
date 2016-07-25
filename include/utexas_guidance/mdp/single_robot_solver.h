@@ -4,6 +4,7 @@
 #include <utexas_guidance/mdp/structures.h>
 #include <utexas_guidance/graph/graph.h>
 
+#include <utexas_planning/common/exceptions.h>
 #include <utexas_planning/core/abstract_planner.h>
 
 namespace utexas_guidance {
@@ -42,6 +43,7 @@ namespace utexas_guidance {
 
       boost::shared_ptr<RNG> rng_;
 
+      utexas_guidance::GuidanceModel::ConstPtr model_;
       Graph graph_;
       std::vector<std::vector<std::vector<int> > > shortest_paths_;
       std::vector<std::vector<float> > shortest_distances_;
