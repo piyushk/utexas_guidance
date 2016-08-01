@@ -1,7 +1,7 @@
 #include <class_loader/class_loader.h>
 
 #include <utexas_guidance/mdp/guidance_model.h>
-#include <utexas_guidance/mdp/single_robot_solver.h>
+#include <utexas_guidance/mdp/pdpt_solver.h>
 #include <utexas_planning/common/exceptions.h>
 
 namespace utexas_guidance {
@@ -34,13 +34,15 @@ namespace utexas_guidance {
                                                "utexas_guidance::GuidanceModel");
     }
     model_->getUnderlyingGraph(graph_);
+    motion_model_ = model_->getUnderlyingMotionModel();
+    task_model_ = model_->getUnderlyingTaskModel();
     rng_ = rng;
     getAllAdjacentVertices(adjacent_vertices_map_, graph_);
     getAllShortestPaths(shortest_distances_, shortest_paths_, graph_);
   }
 
   void PDPTSolver::performEpisodeStartProcessing(const utexas_planning::State::ConstPtr& start_state, 
-                                                        float timeout) {}
+                                                 float timeout) {}
 
   utexas_planning::Action::ConstPtr PDPTSolver::getBestAction(const utexas_planning::State::ConstPtr& state_base) const {
   
@@ -51,7 +53,7 @@ namespace utexas_guidance {
     float robot_speed = motion_model_->getRobotSpeed();
     std::vector<std::vector<std::pair<int, float> > > future_robot_locations(state->robots.size());
     for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
-      RobotState& robot = state->robots[robot_idx];
+      const RobotState& robot = state->robots[robot_idx];
       std::vector<std::pair<int, float> >& future_robot_location = future_robot_locations[robot_idx];
       if (robot.help_destination == NONE) {
         float total_robot_time = 0.0f;
@@ -60,12 +62,12 @@ namespace utexas_guidance {
         RobotState current_task(robot);
         current_task.tau_total_task_time -= current_task.tau_t;
 
-        if (!isRobotExactlyAt(robot, robot.tau_d) {
+        if (!isRobotExactlyAt(robot, robot.tau_d)) {
           float current_edge_distance = shortest_distances_[robot.loc_u][robot.loc_v];
           float distance_to_u = robot.loc_p * current_edge_distance;
           float distance_to_v = current_edge_distance - distance_to_u;
-          float distance_from_u = shortest_distances_[loc_u][robot.tau_d] + distance_to_u;
-          float distance_from_v = shortest_distances_[loc_v][robot.tau_d] + distance_to_v;
+          float distance_from_u = shortest_distances_[robot.loc_u][robot.tau_d] + distance_to_u;
+          float distance_from_v = shortest_distances_[robot.loc_v][robot.tau_d] + distance_to_v;
 
           if (distance_from_u < distance_from_v) {
             total_robot_time += distance_to_u / robot_speed;
@@ -81,12 +83,19 @@ namespace utexas_guidance {
           future_robot_location.push_back(std::make_pair<int, float>(current_loc, total_robot_time));
           if (current_loc == current_task.tau_d) {
             total_robot_time += current_task.tau_total_task_time;
-            task_model_->generateNewTaskForRobot(robot_idx, current_task, RNG()); // Fixed task only.
+            RNG unused_rng(0);
+            task_model_->generateNewTaskForRobot(robot_idx, current_task, unused_rng); // Fixed task only.
           }
           int next_loc = shortest_paths_[current_loc][current_task.tau_d][0];
           total_robot_time += shortest_distances_[current_loc][next_loc] / robot_speed;
           current_loc = next_loc;
         }
+      }
+
+      std::cout << "For robot idx " << robot_idx << ":-" << std::endl;
+      for (int future_location_idx = 0; future_location_idx < future_robot_location.size(); ++future_location_idx) {
+        std::cout << "  " << future_robot_location[future_location_idx].first << "@" << 
+          future_robot_location[future_location_idx].second << std::endl;
       }
     }
 

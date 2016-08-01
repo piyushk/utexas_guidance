@@ -300,6 +300,14 @@ namespace utexas_guidance {
     graph = graph_;
   }
 
+  MotionModel::ConstPtr GuidanceModel::getUnderlyingMotionModel() const {
+    return motion_model_;
+  }
+
+  TaskGenerationModel::ConstPtr GuidanceModel::getUnderlyingTaskModel() const {
+    return task_generation_model_;
+  }
+
 } /* utexas_guidance */
 
 CLASS_LOADER_REGISTER_CLASS(utexas_guidance::GuidanceModel, utexas_planning::GenerativeModel);

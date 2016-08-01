@@ -71,6 +71,8 @@ namespace utexas_guidance {
 
       virtual void initializeVisualizer(const utexas_planning::Visualizer::Ptr& visualizer) const;
       virtual void getUnderlyingGraph(Graph& graph) const;
+      virtual MotionModel::ConstPtr getUnderlyingMotionModel() const;
+      virtual TaskGenerationModel::ConstPtr getUnderlyingTaskModel() const;
 
       // virtual std::map<std::string, std::string> getParamsAsMap() const;
       // virtual utexas_planning::RewardMetrics::Ptr getRewardMetricsAtEpisodeStart() const;

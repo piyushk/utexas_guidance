@@ -49,6 +49,8 @@ namespace utexas_guidance {
       std::vector<std::vector<float> > shortest_distances_;
       std::vector<std::vector<int> > adjacent_vertices_map_;
 
+      TaskGenerationModel::ConstPtr task_model_;
+      MotionModel::ConstPtr motion_model_;
   };
 
 } /* utexas_guidance */
