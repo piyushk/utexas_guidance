@@ -182,7 +182,7 @@ namespace utexas_guidance {
       /* const RobotState& robot = state->robots[robot_id]; */
       int request_id = robot_request_ids[idx_num].second;
       const RequestState& request = state->requests[request_id];
-      actions.resize(action_counter + 2 * adjacent_vertices_map_[request.loc_node].size());
+      actions.resize(action_counter + 2 * adjacent_vertices_map_[request.loc_node].size() + 1);
       for (unsigned int adj = 0; adj < adjacent_vertices_map_[request.loc_node].size(); ++adj) {
         actions[action_counter] =
           Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
@@ -190,6 +190,8 @@ namespace utexas_guidance {
           Action::Ptr(new Action(LEAD_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
         action_counter += 2;
       }
+      actions[action_counter + 1] =
+        Action::Ptr(new Action(LEAD_PERSON, robot_id, request.loc_node, request_id));
     }
   }
 

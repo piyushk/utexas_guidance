@@ -57,7 +57,7 @@ namespace utexas_guidance {
       int robot_id = robot_request_ids[idx_num].first;
       int request_id = robot_request_ids[idx_num].second;
       const RequestState& request = state->requests[request_id];
-      actions.resize(action_counter + 2 * adjacent_vertices_map_[request.loc_node].size());
+      actions.resize(action_counter + 2 * adjacent_vertices_map_[request.loc_node].size() + 1);
       for (unsigned int adj = 0; adj < adjacent_vertices_map_[request.loc_node].size(); ++adj) {
         if (direct_person_allowed) {
           actions[action_counter] =
@@ -71,6 +71,11 @@ namespace utexas_guidance {
           ++action_counter;
           lead_or_direct_action_available = true;
         }
+      }
+      if (lead_person_allowed) {
+        actions[action_counter] = Action::Ptr(new Action(LEAD_PERSON, robot_id, request.loc_node, request_id));
+        ++action_counter;
+        lead_or_direct_action_available = true;
       }
       if (lead_or_direct_action_available) {
         break;

@@ -293,7 +293,9 @@ namespace utexas_guidance {
         // Choose the next node for this person
         int loc_prev = rs.loc_node;
         rs.loc_node = human_decision_model->getNextNode(rs, rng);
-        rs.loc_p = 0.0f;
+        if (rs.loc_node != rs.loc_prev) {
+          rs.loc_p = 0.0f;
+        }
         rs.loc_prev = loc_prev;
       }
 
@@ -305,6 +307,10 @@ namespace utexas_guidance {
       }
 
       float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speeds[i];
+      if (rs.assist_type == LEAD_PERSON && rs.loc_p == 1.0f && rs.loc_node == rs.assist_loc) {
+        time_to_dest = 10.0f;
+      }
+
       // std::cout << shortest_distances_[rs.loc_prev][rs.loc_node] << std::endl;
       // std::cout << human_speeds[i] << std::endl;
       total_time = std::min(total_time, time_to_dest);
@@ -318,8 +324,10 @@ namespace utexas_guidance {
      * this time. */
     for (int i = 0; i < state.requests.size(); ++i) {
       RequestState& rs = state.requests[i];
-      float distance_covered = total_time * human_speeds[i];
-      rs.loc_p += distance_covered / shortest_distances_[rs.loc_prev][rs.loc_node]; // Should be atmost 1.
+      if (rs.loc_prev != rs.loc_node) {
+        float distance_covered = total_time * human_speeds[i];
+        rs.loc_p += distance_covered / shortest_distances_[rs.loc_prev][rs.loc_node]; // Should be atmost 1.
+      }
 
       // Atleast one of the following should be 1, but no real need to check that.
       if (rs.loc_p > 1.0f - 1e-6f) {

@@ -3,12 +3,12 @@ models:
     initial_num_requests: 2
     graph_file: /home/piyushk/utexas_planning/utexas_guidance/graphs/test.yaml
     task_model_file: /home/piyushk/utexas_planning/utexas_guidance/test/fixed_tasks.yaml
-    # task_utility: 0.0
+    task_utility: 0.5
     # robot_speed: 1.0
 planners:
   - name: utexas_planning::MCTS
-  # - name: utexas_guidance::SingleRobotSolver
+  # - name: utexas_guidance::PDPTSolver
     default_policy: utexas_guidance::SingleRobotSolver
-    max_depth: 150
-    uct_reward_bound: 500
+    max_depth: 450
+    uct_reward_bound: 1000
     backup_lambda_value: 0.0

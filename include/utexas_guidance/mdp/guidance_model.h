@@ -33,8 +33,8 @@ namespace utexas_guidance {
       _(bool,is_deterministic,is_deterministic,false) \
       _(float,human_speed,human_speed,1.0f) \
       _(float,robot_speed,robot_speed,0.5f) \
-      _(float,elevator_human_speed,elevator_human_speed,0.3f) \
-      _(float,elevator_robot_speed,elevator_robot_speed,0.2f) \
+      _(float,elevator_human_speed,elevator_human_speed,1.0f) \
+      _(float,elevator_robot_speed,elevator_robot_speed,0.5f) \
       _(float,initial_planning_time,initial_planning_time,10.0f) \
 
       Params_STRUCT(PARAMS)

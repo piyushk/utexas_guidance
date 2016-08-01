@@ -79,7 +79,8 @@ namespace utexas_guidance {
           current_loc = robot.tau_d;
         }
 
-        while (total_robot_time < 100.0f) {
+        // TODO parametrize this time.
+        while (total_robot_time < 150.0f) {
           future_robot_location.push_back(std::make_pair<int, float>(current_loc, total_robot_time));
           if (current_loc == current_task.tau_d) {
             total_robot_time += current_task.tau_total_task_time;
@@ -90,13 +91,14 @@ namespace utexas_guidance {
           total_robot_time += shortest_distances_[current_loc][next_loc] / robot_speed;
           current_loc = next_loc;
         }
+        
+        // std::cout << "For robot idx " << robot_idx << ":-" << std::endl;
+        // for (int future_location_idx = 0; future_location_idx < future_robot_location.size(); ++future_location_idx) {
+        //   std::cout << "  " << future_robot_location[future_location_idx].first << "@" << 
+        //     future_robot_location[future_location_idx].second << std::endl;
+        // }
       }
 
-      std::cout << "For robot idx " << robot_idx << ":-" << std::endl;
-      for (int future_location_idx = 0; future_location_idx < future_robot_location.size(); ++future_location_idx) {
-        std::cout << "  " << future_robot_location[future_location_idx].first << "@" << 
-          future_robot_location[future_location_idx].second << std::endl;
-      }
     }
 
     /* Step 2 - For every request, calculate the intersection between the current request path, and each robot's path.
@@ -113,6 +115,7 @@ namespace utexas_guidance {
       int robot_id = robot_request_ids[idx_num].first;
       int request_id = robot_request_ids[idx_num].second;
       const RequestState& request = state->requests[request_id];
+      // Get shortest path to goal for this request, and see if swapping will help. 
       Action a(LEAD_PERSON, robot_id, shortest_paths_[request.loc_node][request.goal][0], request_id);
       std::vector<utexas_planning::Action::ConstPtr>::const_iterator it = 
         std::find_if(actions.begin(), actions.end(), ActionEquals(a));
