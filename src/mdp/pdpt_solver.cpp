@@ -79,8 +79,8 @@ namespace utexas_guidance {
           current_loc = robot.tau_d;
         }
 
-        // TODO parametrize this time.
-        while (total_robot_time < 150.0f) {
+        // TODO this time needs to be computed as longest edge distance / robot speed.
+        while (total_robot_time <= 150.0f) {
           future_robot_location.push_back(std::make_pair<int, float>(current_loc, total_robot_time));
           if (current_loc == current_task.tau_d) {
             total_robot_time += current_task.tau_total_task_time;
@@ -98,7 +98,6 @@ namespace utexas_guidance {
         //     future_robot_location[future_location_idx].second << std::endl;
         // }
       }
-
     }
 
     /* Step 2 - For every request, calculate the intersection between the current request path, and each robot's path.
@@ -112,11 +111,109 @@ namespace utexas_guidance {
     std::vector<std::pair<int, int> > robot_request_ids;
     getColocatedRobotRequestIds(*state, robot_request_ids);
     for (unsigned int idx_num = 0; idx_num < robot_request_ids.size(); ++idx_num) {
-      int robot_id = robot_request_ids[idx_num].first;
+      int lead_robot_idx = robot_request_ids[idx_num].first;
       int request_id = robot_request_ids[idx_num].second;
       const RequestState& request = state->requests[request_id];
+
+      // Figure out if you need to:
+      //  - lead person to the goal.
+      //  OR
+      //  - assign robot at future position.
+      //  - and/or wait at current position,
+      
+      // First calculate intersection point. If intersection is past one step of the request, or it does not exist, LEAD PERSON.
+      // Once intersection point has been calculated - call assign robot if robot will get there first/leave it prior to
+      // next call.
+
+      // TODO: add some code to handle elevators as well.
+      // Calculate time to which we're interested, which is the time until the next lead action will be executed, and
+      // see if some assignments need to take place in that time.
+      float max_time = 150.0f;
+      std::vector<int> first_intersection(state->robots.size(), -1);
+      float max_relative_reward = 0.0f;
+      int exchange_idx = -1;
+      for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
+        std::vector<std::pair<int, float> >& future_robot_location = future_robot_locations[robot_idx];
+        int interesection_idx = -1;
+        float robot_time_to_intersection = 0.0f;
+        float reward = 0.0f;
+        for (int future_location_idx = 0; future_location_idx < future_robot_location.size(); ++future_location_idx) {
+          if (future_robot_location[future_location_idx].second > max_time) {
+            break;
+          }
+          if (std::find(shortest_paths_[request.loc_node][request.goal].begin(),
+                        shortest_paths_[request.loc_node][request.goal].end(),
+                        future_robot_location[future_location_idx].first) != 
+              shortest_paths_[request.loc_node][request.goal].end()) {
+            intersection_idx = future_robot_location[future_location_idx].first;
+            robot_time_to_intersection = future_robot_location[future_location_idx].second;
+            break;
+          }
+        }
+
+        if (intersection_idx != -1) {
+          // First calculate the reward loss due to wait at the intersection point.
+          float lead_time_to_intersection = robot_speed * shortest_distances_[request_.loc_node][intersection_idx];
+          if (lead_time_to_intersection > robot_time_to_intersection) {
+            // TODO: This is buggy, since the robot can do work during this time. You need the to know if they're gonna
+            // wait at each location they visit as well.
+            // TODO: This assumes the task utility is same across all background tasks. You need to store the task
+            // utility per task as well. Overall it's starting to look like you need a better data structure than pair.
+            reward -= state->robots[robot_idx].tau_u * (lead_time_to_intersection - robot_time_to_intersection);
+          } else {
+            // TODO: This assumes the task utility is same across all background tasks. You need to store the task
+            // utility per task as well. Overall it's starting to look like you need a better data structure than pair.
+            reward -= (1.0f + state->robots[lead_robot_idx].tau_u) * (lead_time_to_intersection - robot_time_to_intersection);
+          }
+
+          // Next, calculate the reward loss by assigning the new robot. You need the destination of the robot at the
+          // time of intersection. 
+          // TODO: This is buggy. You don't have that destination yet.
+          float time_to_service_destination_before_action =
+            robot_speed * shortest_distances_[intersection_idx][destination_at_time_of_intersection];
+          float time_to_service_destination_after_action =
+            robot_speed * shortest_distances_[request->goal][destination_at_time_of_intersection];
+          float leading_time = 
+            robot_speed * shortest_distances_[intersection_idx][request->goal];
+          float extra_time_to_service_destination = 
+            leading_time + time_to_service_destination_after_action - time_to_service_destination_before_action;
+          reward -= state->robots[robot_idx].tau_u * extra_time_to_service_destination;
+
+          // Next calculate the reward gain by early relief of the original leading robot.
+          float time_to_service_destination_before_action =
+            robot_speed * shortest_distances_[request->goal][state->robots[lead_robot_idx].tau_d];
+          float time_to_service_destination_after_action =
+            robot_speed * shortest_distances_[intersection_idx][state->robots[lead_robot_idx].tau_d];
+          float time_not_spent_leading = 
+            robot_speed * shortest_distances_[intersection_idx][request->goal];
+          float time_saved = 
+            time_not_spent_leading + time_to_service_destination_before_action - time_to_service_destination_before_action;
+          reward += state->robots[lead_robot_idx].tau_u * extra_time_to_service_destination;
+        }
+
+        if (reward > max_relative_reward) {
+          max_relative_reward = reward;
+          exchange_idx = robot_idx;
+        }
+
+      }
+        
+      // Next, figure out when the exchange will happen, should it happen. If the current location is the exchange
+      // location, see if wait (/and assign needs to be called - assign might need to be called to prevent the robot
+      // from moving ahead before the wait terminates.
+      // If the current location is not the wait location, see if assignment needs to be called to prevent the robot
+      // from moving past the intersection point. This might be merged with the last condition.
+
+      // For each intersection, see which exchange will produce the best action, and then see if what action is
+      // necessary to take.
+      // How would an exchange work - figure out who gets there first, no loss in reward until then. If human has to
+      // wait, then the reward is (1 + \tau_u) * time, if other robot has to wait, it is \tau_u * time. If transition
+      // has to happen, calculate the reward gain by starting robot, and the reward loss by final robot. Pick a
+      // transition if any. if more than the next lead action away, do nothing and drop down to the next request.
+      for 
+
       // Get shortest path to goal for this request, and see if swapping will help. 
-      Action a(LEAD_PERSON, robot_id, shortest_paths_[request.loc_node][request.goal][0], request_id);
+      Action a(LEAD_PERSON, lead_robot_idx, shortest_paths_[request.loc_node][request.goal][0], request_id);
       std::vector<utexas_planning::Action::ConstPtr>::const_iterator it = 
         std::find_if(actions.begin(), actions.end(), ActionEquals(a));
       if (it != actions.end()) {
