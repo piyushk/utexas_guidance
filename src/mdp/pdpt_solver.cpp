@@ -51,6 +51,12 @@ namespace utexas_guidance {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
     float robot_speed = motion_model_->getRobotSpeed();
+
+    std::vector<std::pair<int, int> > robot_request_ids;
+    getColocatedRobotRequestIds(*state, robot_request_ids);
+
+    std::vector<bool> robot_available(state->robots.size());
+    
     std::vector<std::vector<std::pair<int, float> > > future_robot_locations(state->robots.size());
     for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
       const RobotState& robot = state->robots[robot_idx];
@@ -108,6 +114,13 @@ namespace utexas_guidance {
     model_->getActionsAtState(state, actions);
 
     // Lead via shortest path.
+    // TODO: Lead is necessary, but we won't go into this loop if lead person has been called, and we might still need
+    // to assign a robot. We'll have to write some code to detect states post lead action as well, alternatively this 
+    // solver may not solve the restricted version of the MDP, since that will lead to many problems. so maybe assign a
+    // robot first? Allow robots that have been assigned, but are not colocated or are currently leading person to
+    // recreate action selection. First assign, then lead. 
+    // a default policy. We could also potentially unroll the most likely trajectory of a human that's not being helped
+    // as well, and there's no point going in if max assigned robots is being met as well
     std::vector<std::pair<int, int> > robot_request_ids;
     getColocatedRobotRequestIds(*state, robot_request_ids);
     for (unsigned int idx_num = 0; idx_num < robot_request_ids.size(); ++idx_num) {
@@ -132,6 +145,8 @@ namespace utexas_guidance {
       std::vector<int> first_intersection(state->robots.size(), -1);
       float max_relative_reward = 0.0f;
       int exchange_idx = -1;
+      int max_intersection_idx = -1;
+      bool assign_robot_to_intersection = false;
       for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
         std::vector<std::pair<int, float> >& future_robot_location = future_robot_locations[robot_idx];
         int interesection_idx = -1;
@@ -189,13 +204,16 @@ namespace utexas_guidance {
           float time_saved = 
             time_not_spent_leading + time_to_service_destination_before_action - time_to_service_destination_before_action;
           reward += state->robots[lead_robot_idx].tau_u * extra_time_to_service_destination;
-        }
 
-        if (reward > max_relative_reward) {
-          max_relative_reward = reward;
-          exchange_idx = robot_idx;
-        }
+          if (reward > max_relative_reward) {
+            max_relative_reward = reward;
+            exchange_idx = robot_idx;
+            max_intersection_idx = intersection_idx;
+            // TODO: this is buggy, should use end time at the location, similar to reward.
+            if (robot_time_to_intersection < 
+          }
 
+        }
       }
         
       // Next, figure out when the exchange will happen, should it happen. If the current location is the exchange
@@ -203,14 +221,6 @@ namespace utexas_guidance {
       // from moving ahead before the wait terminates.
       // If the current location is not the wait location, see if assignment needs to be called to prevent the robot
       // from moving past the intersection point. This might be merged with the last condition.
-
-      // For each intersection, see which exchange will produce the best action, and then see if what action is
-      // necessary to take.
-      // How would an exchange work - figure out who gets there first, no loss in reward until then. If human has to
-      // wait, then the reward is (1 + \tau_u) * time, if other robot has to wait, it is \tau_u * time. If transition
-      // has to happen, calculate the reward gain by starting robot, and the reward loss by final robot. Pick a
-      // transition if any. if more than the next lead action away, do nothing and drop down to the next request.
-      for 
 
       // Get shortest path to goal for this request, and see if swapping will help. 
       Action a(LEAD_PERSON, lead_robot_idx, shortest_paths_[request.loc_node][request.goal][0], request_id);
