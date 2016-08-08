@@ -121,6 +121,8 @@ namespace utexas_guidance {
     std::vector<RequestState> requests;
     std::vector<RobotState> robots;
 
+    std::vector<Action> actions_since_wait;
+
   private:
 
     virtual utexas_planning::State::Ptr cloneImpl() const;
@@ -130,6 +132,7 @@ namespace utexas_guidance {
       ar & BOOST_SERIALIZATION_BASE_OBJECT_NVP(State);
       ar & BOOST_SERIALIZATION_NVP(requests);
       ar & BOOST_SERIALIZATION_NVP(robots);
+      ar & BOOST_SERIALIZATION_NVP(actions_since_wait);
     }
 
   };

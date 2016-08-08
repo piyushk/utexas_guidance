@@ -73,7 +73,7 @@ add_library(mdp
   src/mdp/common.cpp
   src/mdp/extended_structures.cpp
   src/mdp/guidance_model.cpp
-  src/mdp/pdpt_solver.cpp
+  #src/mdp/pdpt_solver.cpp
   src/mdp/restricted_model.cpp
   src/mdp/single_robot_solver.cpp
   src/mdp/structures.cpp

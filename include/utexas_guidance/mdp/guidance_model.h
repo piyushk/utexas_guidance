@@ -62,6 +62,8 @@ namespace utexas_guidance {
                               float& post_action_timeout,
                               boost::shared_ptr<RNG> rng) const;
 
+      virtual void unrollAction(const State& state, const Action& action, State& prev_state) const;
+
       virtual void getActionsAtState(const utexas_planning::State::ConstPtr& state,
                                      std::vector<utexas_planning::Action::ConstPtr>& actions) const;
 

@@ -20,6 +20,13 @@ namespace utexas_guidance {
       Action a_;
   };
 
+  struct RobotFutureLocation {
+    int loc;
+    float time_arrive;
+    float time_leave;
+    int tau_d;
+  }
+
   PDPTSolver::~PDPTSolver() {}
 
   void PDPTSolver::init(const utexas_planning::GenerativeModel::ConstPtr& model_base,
@@ -54,14 +61,21 @@ namespace utexas_guidance {
 
     std::vector<std::pair<int, int> > robot_request_ids;
     getColocatedRobotRequestIds(*state, robot_request_ids);
+    std::vector<bool> available_robots(state->robots.size(), false);
+    for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
+      if ((robot.help_destination == NONE) || (!robot.is_leading_person)) {
+        
+      }||
+    }
 
-    std::vector<bool> robot_available(state->robots.size());
-    
-    std::vector<std::vector<std::pair<int, float> > > future_robot_locations(state->robots.size());
+    std::vector<std::vector<RobotFutureLocation> > future_robot_locations(state->robots.size());
+
     for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
       const RobotState& robot = state->robots[robot_idx];
-      std::vector<std::pair<int, float> >& future_robot_location = future_robot_locations[robot_idx];
-      if (robot.help_destination == NONE) {
+      std::vector<RobotFutureLocation>& future_robot_location = future_robot_locations[robot_idx];
+      if ((robot.help_destination == NONE) ||
+          (!robot.is_leading_person) ||
+          ) {
         float total_robot_time = 0.0f;
         int current_loc = robot.loc_u;
 
@@ -85,14 +99,20 @@ namespace utexas_guidance {
           current_loc = robot.tau_d;
         }
 
-        // TODO this time needs to be computed as longest edge distance / robot speed.
+        // TODO this time needs to be parametrized somehow.
         while (total_robot_time <= 150.0f) {
-          future_robot_location.push_back(std::make_pair<int, float>(current_loc, total_robot_time));
+          RobotFutureLocation future_loc;
+          future_loc.loc = current_loc;
+          future_loc.time_arrive = total_robot_time;
+          future_loc.time_leave = total_robot_time;
+          future_loc.tau_d = current_task.tau_d;
           if (current_loc == current_task.tau_d) {
             total_robot_time += current_task.tau_total_task_time;
+            future_loc.time_leave = total_robot_time;
             RNG unused_rng(0);
             task_model_->generateNewTaskForRobot(robot_idx, current_task, unused_rng); // Fixed task only.
           }
+          future_robot_location.push_back(future_loc);
           int next_loc = shortest_paths_[current_loc][current_task.tau_d][0];
           total_robot_time += shortest_distances_[current_loc][next_loc] / robot_speed;
           current_loc = next_loc;
@@ -110,9 +130,6 @@ namespace utexas_guidance {
      * Make a special consideration for elevators. If there is an intersection, calculate how well would it do with a 
      * transfer. If transfer is better, go for it, otherwise continue leading the robot yourself. */
 
-    std::vector<utexas_planning::Action::ConstPtr> actions;
-    model_->getActionsAtState(state, actions);
-
     // Lead via shortest path.
     // TODO: Lead is necessary, but we won't go into this loop if lead person has been called, and we might still need
     // to assign a robot. We'll have to write some code to detect states post lead action as well, alternatively this 
@@ -121,6 +138,7 @@ namespace utexas_guidance {
     // recreate action selection. First assign, then lead. 
     // a default policy. We could also potentially unroll the most likely trajectory of a human that's not being helped
     // as well, and there's no point going in if max assigned robots is being met as well
+
     std::vector<std::pair<int, int> > robot_request_ids;
     getColocatedRobotRequestIds(*state, robot_request_ids);
     for (unsigned int idx_num = 0; idx_num < robot_request_ids.size(); ++idx_num) {
@@ -147,26 +165,40 @@ namespace utexas_guidance {
       int exchange_idx = -1;
       int max_intersection_idx = -1;
       bool assign_robot_to_intersection = false;
+
       for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
+
+        // See if the current path of this robot is going to intersect with the request we're interested in.
         std::vector<std::pair<int, float> >& future_robot_location = future_robot_locations[robot_idx];
-        int interesection_idx = -1;
-        float robot_time_to_intersection = 0.0f;
-        float reward = 0.0f;
+        RobotFutureLocation intersection;
+        intersection.loc = -1;
+        int location_prior_to_intersection = -1;
         for (int future_location_idx = 0; future_location_idx < future_robot_location.size(); ++future_location_idx) {
-          if (future_robot_location[future_location_idx].second > max_time) {
+          
+          if (future_robot_location[future_location_idx].time_arrive > max_time) {
             break;
           }
-          if (std::find(shortest_paths_[request.loc_node][request.goal].begin(),
-                        shortest_paths_[request.loc_node][request.goal].end(),
-                        future_robot_location[future_location_idx].first) != 
+
+          // Figure out if there is a direct intersection.
+          if (request.loc_node == future_robot_location[future_location_idx].loc) {
+            intersection = future_robot_location[future_location_idx];
+          }
+
+          location_prior_to_intersection = request.loc_node;
+          for (int path_counter_idx = 0; 
+               path_counter_idx < shortest_paths_[request.loc_node][request.goal]; 
+               ++path_counter_idx) {
+            if (shortest_paths_[request.loc_node][request.goal][path_counter_idx] == 
+            location_prior_to_intersection = 
               shortest_paths_[request.loc_node][request.goal].end()) {
-            intersection_idx = future_robot_location[future_location_idx].first;
-            robot_time_to_intersection = future_robot_location[future_location_idx].second;
+            intersection = future_robot_location[future_location_idx];
             break;
           }
+
         }
 
-        if (intersection_idx != -1) {
+        float relative_reward = 0.0f;
+        if (intersection.loc != -1) {
           // First calculate the reward loss due to wait at the intersection point.
           float lead_time_to_intersection = robot_speed * shortest_distances_[request_.loc_node][intersection_idx];
           if (lead_time_to_intersection > robot_time_to_intersection) {

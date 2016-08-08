@@ -192,6 +192,11 @@ namespace utexas_guidance {
       const State& other = dynamic_cast<const State&>(other_base);
 
       // Compare requests size.
+      COMPARE_MEMBER(actions_since_wait.size());
+      for (unsigned int i = 0; i < actions_since_wait.size(); ++i) {
+        COMPARE_MEMBER(actions_since_wait[i]);
+      }
+
       COMPARE_MEMBER(requests.size());
       // Then check if the vector contents are different.
       for (unsigned int i = 0; i < requests.size(); ++i) {
@@ -214,7 +219,9 @@ namespace utexas_guidance {
   bool State::operator==(const utexas_planning::State& other_base) const {
     try {
       const State& other = dynamic_cast<const State&>(other_base);
-      return (requests == other.requests) && (robots == other.robots);
+      return (requests == other.requests) && 
+        (robots == other.robots) && 
+        (actions_since_wait == other.actions_since_wait);
     } catch(const std::bad_cast& exp) {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
@@ -228,6 +235,9 @@ namespace utexas_guidance {
     std::size_t seed = 0;
     boost::hash_range(seed, robots.begin(), robots.end());
     boost::hash_range(seed, requests.begin(), requests.end());
+    for (unsigned int i = 0; i < actions_since_wait.size(); ++i) {
+      boost::hash_combine(seed, actions_since_wait[i].hash());
+    }
     return seed;
   }
 
@@ -240,6 +250,11 @@ namespace utexas_guidance {
     for (unsigned int i = 0; i < robots.size(); ++i) {
       stream << robots[i] << ", ";
     }
+    stream << "ActionSinceWait: ";
+    for (unsigned int i = 0; i < actions_since_wait.size(); ++i) {
+      actions_since_wait[i].serialize(stream);
+      stream << ", ";
+    }
     stream << "]";
   }
 
@@ -251,6 +266,7 @@ namespace utexas_guidance {
     State::Ptr clone(new State);
     clone->requests = requests;
     clone->robots = robots;
+    clone->actions_since_wait = actions_since_wait;
     return clone;
   }
 

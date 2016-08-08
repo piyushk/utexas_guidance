@@ -160,39 +160,106 @@ namespace utexas_guidance {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
 
-    // Allow robots to be assigned/released at any given location.
-    for (unsigned int robot = 0; robot < state->robots.size(); ++robot) {
-      if (state->robots[robot].help_destination == NONE) {
-        actions.resize(action_counter + num_vertices_);
-        for (unsigned int node = 0; node < num_vertices_; ++node) {
-          actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot, node));
+    Action last_action;
+    if (state->actions_since_wait.size() != 0) {
+      last_action = state->actions_since_wait.back();
+    }
+
+    // DECOMPOSITION ORDERING IS RELEASE -> DIRECT -> LEAD -> ASSIGN
+
+    // RELEASE_ROBOT
+    if (last_action.type == WAIT || last_action.type == RELEASE_ROBOT) {
+      int min_releasable_idx = 0;
+      if (last_action.type == RELEASE_ROBOT) {
+        min_releasable_idx = last_action.robot_id + 1;
+      }
+      for (unsigned int robot = min_releasable_idx; robot < state->robots.size(); ++robot) {
+        if ((state->robots[robot].help_destination != NONE) &&
+            !(state->robots[robot].is_leading_person)) {
+          actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT, robot)));
           ++action_counter;
         }
-      } else if (!(state->robots[robot].is_leading_person)) {
-        actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT, robot)));
-        ++action_counter;
       }
     }
 
-    // Allow leading/guiding via all colocated robots.
-    std::vector<std::pair<int, int> > robot_request_ids;
-    getColocatedRobotRequestIds(*state, robot_request_ids);
-    for (unsigned int idx_num = 0; idx_num < robot_request_ids.size(); ++idx_num) {
-      int robot_id = robot_request_ids[idx_num].first;
-      /* const RobotState& robot = state->robots[robot_id]; */
-      int request_id = robot_request_ids[idx_num].second;
-      const RequestState& request = state->requests[request_id];
-      actions.resize(action_counter + 2 * adjacent_vertices_map_[request.loc_node].size() + 1);
-      for (unsigned int adj = 0; adj < adjacent_vertices_map_[request.loc_node].size(); ++adj) {
-        actions[action_counter] =
-          Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
-        actions[action_counter + 1] =
-          Action::Ptr(new Action(LEAD_PERSON, robot_id, adjacent_vertices_map_[request.loc_node][adj], request_id));
-        action_counter += 2;
+    // TODO: Heuristic - Parameterize.
+    int max_assignable_robots = state->robots.size();
+    for (int robot_id = 0; robot_id < state->robots.size(); ++robot_id) {
+      if (state->robots[robot_id].help_destination != NONE) {
+        --max_assignable_robots;
       }
-      actions[action_counter + 1] =
-        Action::Ptr(new Action(LEAD_PERSON, robot_id, request.loc_node, request_id));
     }
+
+    // Any robot that has been released cannot be assigned - it should have been assigned or lead
+    // directly without calling release.
+    std::vector<bool> assignable_robot_ids(state->robots.size(), true);
+    for (int last_action_idx = 0; last_action_idx < state->actions_since_wait.size(); ++last_action_idx) {
+      if (state->actions_since_wait[last_action_idx].type == RELEASE_ROBOT) {
+        assignable_robot_ids[state->actions_since_wait[last_action_idx].robot_id] = false;
+      }
+    }
+
+    // TODO: Heuristic - Force a DIRECT or a LEAD action
+    // DIRECT_PERSON or LEAD_PERSON
+    if (last_action.type == WAIT || last_action.type == RELEASE_ROBOT || 
+        last_action.type == DIRECT_PERSON || last_action.type == LEAD_PERSON) {
+      int min_directable_idx = 0;
+      if (last_action.type == DIRECT_PERSON || last_action.type == LEAD_PERSON) {
+        min_directable_idx = last_action.robot_id + 1;
+      }
+      for (int robot_id = 0; robot_id < state->robots.size(); ++robot_id) {
+        float loc_p = state->robots[robot_id].loc_p;
+        int exact_loc = (loc_p == 0.0f) ? state->robots[robot_id].loc_u :
+          (loc_p == 1.0f) ? state->robots[robot_id].loc_v : NONE;
+        if (exact_loc != NONE) {
+          for (int request_id = 0; request_id < state->requests.size(); ++request_id) {
+            if (state->requests[request_id].loc_p == 1.0f && 
+                state->requests[request_id].loc_node == exact_loc) {
+
+              // DIRECT_PERSON
+              actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size());
+              for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
+                actions[action_counter] =
+                  Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[exact_loc][adj], request_id));
+                ++action_counter;
+              }
+
+              // LEAD_PERSON
+              if (assignable_robot_ids[robot_id] &&
+                  (state->robots[robot_id].help_destination != NONE ||
+                   max_assignable_robots > 0)) {
+                actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size() + 1);
+                for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
+                  actions[action_counter] =
+                    Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[exact_loc][adj], request_id));
+                  ++action_counter;
+                }
+                actions[action_counter + 1] = Action::Ptr(new Action(LEAD_PERSON, robot_id, exact_loc, request_id));
+                ++action_counter;
+              }
+
+            }
+          }
+        }
+      }
+    }
+
+    // ASSIGN_ROBOT
+    for (int robot_id = 0; robot_id < state->robots.size(); ++robot_id) {
+      if (state->robots[robot_id].help_destination == NONE && 
+          max_assignable_robots > 0 &&
+          assignable_robot_ids[robot_id]) {
+        actions.resize(action_counter + num_vertices_);
+        // TODO Heuristic 1: Only do adjacent vertices here?
+        for (unsigned int node = 0; node < num_vertices_; ++node) {
+          actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, node));
+          ++action_counter;
+        }
+      }
+    }
+
+    // WAIT
+    actions.push_back(Action::Ptr(new Action(WAIT)));
   }
 
   utexas_planning::State::ConstPtr GuidanceModel::getStartState(long seed) const {
