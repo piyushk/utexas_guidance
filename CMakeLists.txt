@@ -66,15 +66,15 @@ target_link_libraries(graph
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
-  ${GLUT_LIBRARIES}
+  ${GLUT_LIBRARY}
 )
 
 add_library(mdp
   src/mdp/common.cpp
-  src/mdp/extended_structures.cpp
+  #src/mdp/extended_structures.cpp
   src/mdp/guidance_model.cpp
   #src/mdp/pdpt_solver.cpp
-  src/mdp/restricted_model.cpp
+  #src/mdp/restricted_model.cpp
   src/mdp/single_robot_solver.cpp
   src/mdp/structures.cpp
   src/mdp/transition_model.cpp
@@ -85,6 +85,8 @@ target_link_libraries(mdp
   ${UTEXAS_PLANNING_LIBRARIES}
   ${Boost_LIBRARIES}
   ${YAML_CPP_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+  ${GLUT_LIBRARY}
 )
 
 add_executable(graph_viewer
@@ -95,7 +97,7 @@ target_link_libraries(graph_viewer
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
-  ${GLUT_LIBRARIES}
+  ${GLUT_LIBRARY}
 )
 
 add_executable(main
@@ -106,7 +108,7 @@ target_link_libraries(main
   ${QGLVIEWER_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
-  ${GLUT_LIBRARIES}
+  ${GLUT_LIBRARY}
 )
 
 install(

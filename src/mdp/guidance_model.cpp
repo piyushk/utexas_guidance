@@ -111,13 +111,43 @@ namespace utexas_guidance {
           next_state->robots[action->robot_id].is_leading_person = true;
         }
       }
+      next_state->actions_since_wait.push_back(*action);
       reward = 0.0f;
       depth_count = 0;
       post_action_timeout = 0; // No more time to do planning.
     } else {
 
+      float unhelpful_robot_penalty = 0.0f;
+
+      std::vector<int> unhelpful_robot_ids;
+      for (int last_action_idx = 0; last_action_idx < state->actions_since_wait.size(); ++last_action_idx) {
+        if (state->actions_since_wait[last_action_idx].type == RELEASE_ROBOT) {
+          unhelpful_robot_ids.push_back(state->actions_since_wait[last_action_idx].robot_id);
+        } else if (state->actions_since_wait[last_action_idx].type == DIRECT_PERSON) {
+          unhelpful_robot_ids.erase(std::remove(unhelpful_robot_ids.begin(), 
+                                                unhelpful_robot_ids.end(), 
+                                                state->actions_since_wait[last_action_idx].robot_id), 
+                                    unhelpful_robot_ids.end());
+        }
+      }
+      unhelpful_robot_penalty += params_.h4_unhelpful_robot_penalty * unhelpful_robot_ids.size();
+      
+      next_state->actions_since_wait.clear();
+
       motion_model_->move(*next_state, human_decision_model_, task_generation_model_, *rng, post_action_timeout);
       float time_loss = state->requests.size() * post_action_timeout;
+
+      // TODO: for requests that finished, and the person was led to the goal, do an implicit release of the robot.
+      
+      if (isTerminalState(next_state)) {
+        // Penalize for any assigned robots.
+        for(unsigned int i = 0; i < next_state->robots.size(); ++i) {
+          const RobotState& robot = next_state->robots[i];
+          if (robot.help_destination != NONE) {
+            unhelpful_robot_penalty  += params_.h4_unhelpful_robot_penalty;
+          }
+        }
+      }
 
       // TODO move these to part of RewardMetrics
       float utility_loss = 0.0f;
@@ -133,12 +163,12 @@ namespace utexas_guidance {
             distance_to_service_destination - distance_to_service_destination_before_action;
           float extra_time_to_service_destination =
             extra_distance_to_service_destination / motion_model_->getRobotSpeed();
-          float utility_loss_per_robot = (extra_time_to_service_destination + time_loss) * robot.tau_u;
+          float utility_loss_per_robot = (extra_time_to_service_destination + post_action_timeout) * robot.tau_u;
           utility_loss += utility_loss_per_robot;
         }
       }
 
-      reward = -(time_loss + utility_loss);
+      reward = -(time_loss + utility_loss + unhelpful_robot_penalty);
       depth_count = lrint(post_action_timeout);
     }
 
@@ -149,11 +179,6 @@ namespace utexas_guidance {
                                         std::vector<utexas_planning::Action::ConstPtr>& actions) const {
     actions.clear();
     int action_counter = 0;
-
-    // Wait is allowed at all times.
-    Action::Ptr action(new Action(WAIT, 0, 0));
-    actions.push_back(action);
-    ++action_counter;
 
     State::ConstPtr state = boost::dynamic_pointer_cast<const State>(state_base);
     if (!state) {
@@ -183,10 +208,16 @@ namespace utexas_guidance {
     }
 
     // TODO: Heuristic - Parameterize.
-    int max_assignable_robots = state->robots.size();
+    int max_assigned_robots = state->robots.size();
+    if (params_.h1_max_assigned_robots != MAX_ASSIGNED_ROBOTS_NOLIMIT) {
+      max_assigned_robots = 
+        (params_.h1_max_assigned_robots == MAX_ASSIGNED_ROBOTS_SAME_AS_REQUESTS) ? 
+        state->requests.size() : params_.h1_max_assigned_robots;
+
+    }
     for (int robot_id = 0; robot_id < state->robots.size(); ++robot_id) {
       if (state->robots[robot_id].help_destination != NONE) {
-        --max_assignable_robots;
+        --max_assigned_robots;
       }
     }
 
@@ -194,28 +225,33 @@ namespace utexas_guidance {
     // directly without calling release.
     std::vector<bool> assignable_robot_ids(state->robots.size(), true);
     for (int last_action_idx = 0; last_action_idx < state->actions_since_wait.size(); ++last_action_idx) {
-      if (state->actions_since_wait[last_action_idx].type == RELEASE_ROBOT) {
+      if (state->actions_since_wait[last_action_idx].type == RELEASE_ROBOT ||
+          state->actions_since_wait[last_action_idx].type == LEAD_PERSON) {
         assignable_robot_ids[state->actions_since_wait[last_action_idx].robot_id] = false;
       }
     }
 
-    // TODO: Heuristic - Force a DIRECT or a LEAD action
     // DIRECT_PERSON or LEAD_PERSON
+    // TODO: Outside loop should be requests, not robots, just in case multiple robots are
+    // present at the same location.
+    bool direct_action_available = false;
     if (last_action.type == WAIT || last_action.type == RELEASE_ROBOT || 
         last_action.type == DIRECT_PERSON || last_action.type == LEAD_PERSON) {
       int min_directable_idx = 0;
       if (last_action.type == DIRECT_PERSON || last_action.type == LEAD_PERSON) {
-        min_directable_idx = last_action.robot_id + 1;
+        min_directable_idx = last_action.request_id + 1;
       }
-      for (int robot_id = 0; robot_id < state->robots.size(); ++robot_id) {
-        float loc_p = state->robots[robot_id].loc_p;
-        int exact_loc = (loc_p == 0.0f) ? state->robots[robot_id].loc_u :
-          (loc_p == 1.0f) ? state->robots[robot_id].loc_v : NONE;
-        if (exact_loc != NONE) {
-          for (int request_id = 0; request_id < state->requests.size(); ++request_id) {
-            if (state->requests[request_id].loc_p == 1.0f && 
-                state->requests[request_id].loc_node == exact_loc) {
+      for (int request_id = min_directable_idx; request_id < state->requests.size(); ++request_id) {
+        if (state->requests[request_id].loc_p == 1.0f && 
+            state->requests[request_id].assist_type == NONE) {
+          // See if robot(s) are colocated with this request.
+          for (int robot_id = 0; robot_id < state->robots.size(); ++robot_id) {
+            float loc_p = state->robots[robot_id].loc_p;
+            int exact_loc = (loc_p == 0.0f) ? state->robots[robot_id].loc_u :
+              (loc_p == 1.0f) ? state->robots[robot_id].loc_v : NONE;
+            if (exact_loc == state->requests[request_id].loc_node) {
 
+              direct_action_available = true;
               // DIRECT_PERSON
               actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size());
               for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
@@ -227,33 +263,61 @@ namespace utexas_guidance {
               // LEAD_PERSON
               if (assignable_robot_ids[robot_id] &&
                   (state->robots[robot_id].help_destination != NONE ||
-                   max_assignable_robots > 0)) {
+                   max_assigned_robots > 0)) {
                 actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size() + 1);
                 for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
                   actions[action_counter] =
-                    Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[exact_loc][adj], request_id));
+                    Action::Ptr(new Action(LEAD_PERSON, robot_id, adjacent_vertices_map_[exact_loc][adj], request_id));
                   ++action_counter;
                 }
-                actions[action_counter + 1] = Action::Ptr(new Action(LEAD_PERSON, robot_id, exact_loc, request_id));
+                actions[action_counter] = Action::Ptr(new Action(LEAD_PERSON, robot_id, exact_loc, request_id));
                 ++action_counter;
               }
 
             }
           }
         }
+        if (params_.h3_force_assistance && direct_action_available) {
+          return;
+        }
       }
     }
 
     // ASSIGN_ROBOT
-    for (int robot_id = 0; robot_id < state->robots.size(); ++robot_id) {
-      if (state->robots[robot_id].help_destination == NONE && 
-          max_assignable_robots > 0 &&
+    int min_assignable_idx = 0;
+    if (last_action.type == ASSIGN_ROBOT) {
+      min_assignable_idx = last_action.robot_id + 1;
+    }
+    for (int robot_id = min_assignable_idx; robot_id < state->robots.size(); ++robot_id) {
+      if (!(state->robots[robot_id].is_leading_person) && 
+          (max_assigned_robots > 0 || state->robots[robot_id].help_destination != NONE) &&
           assignable_robot_ids[robot_id]) {
-        actions.resize(action_counter + num_vertices_);
-        // TODO Heuristic 1: Only do adjacent vertices here?
-        for (unsigned int node = 0; node < num_vertices_; ++node) {
-          actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, node));
-          ++action_counter;
+        if (!params_.h2_only_allow_adjacent_assignment) {
+          actions.resize(action_counter + num_vertices_);
+          for (unsigned int node = 0; node < num_vertices_; ++node) {
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, node));
+            ++action_counter;
+          }
+        } else {
+          float loc_p = state->robots[robot_id].loc_p;
+          int exact_loc = (loc_p == 0.0f) ? state->robots[robot_id].loc_u :
+            (loc_p == 1.0f) ? state->robots[robot_id].loc_v : NONE;
+          if (exact_loc != NONE) {
+            actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size() + 1);
+            for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
+              actions[action_counter] =
+                Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, adjacent_vertices_map_[exact_loc][adj]));
+              ++action_counter;
+            }
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, exact_loc));
+            ++action_counter;
+          } else {
+            actions.resize(action_counter + 2);
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, state->robots[robot_id].loc_u));
+            ++action_counter;
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, state->robots[robot_id].loc_v));
+            ++action_counter;
+          }
         }
       }
     }

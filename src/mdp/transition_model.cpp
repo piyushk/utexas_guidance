@@ -293,7 +293,7 @@ namespace utexas_guidance {
         // Choose the next node for this person
         int loc_prev = rs.loc_node;
         rs.loc_node = human_decision_model->getNextNode(rs, rng);
-        if (rs.loc_node != rs.loc_prev) {
+        if (rs.loc_node != loc_prev) {
           rs.loc_p = 0.0f;
         }
         rs.loc_prev = loc_prev;
@@ -337,7 +337,7 @@ namespace utexas_guidance {
       }
     }
 
-    /* Remove all completed requests. */
+    /* Remove all completed requests. If a robot lead the person to the goal, release that robot as well. */
     state.requests.erase(std::remove_if(state.requests.begin(), state.requests.end(), requestComplete),
                          state.requests.end());
 

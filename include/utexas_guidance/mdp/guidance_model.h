@@ -14,6 +14,9 @@ namespace utexas_guidance {
   const std::string FIXED_TASK_MODEL = "fixed";
   const std::string RANDOM_TASK_MODEL = "random";
 
+  const static int MAX_ASSIGNED_ROBOTS_NOLIMIT = -1;
+  const static int MAX_ASSIGNED_ROBOTS_SAME_AS_REQUESTS = -2;
+
   class GuidanceModel : public utexas_planning::GenerativeModel {
 
     public:
@@ -36,6 +39,10 @@ namespace utexas_guidance {
       _(float,elevator_human_speed,elevator_human_speed,1.0f) \
       _(float,elevator_robot_speed,elevator_robot_speed,0.5f) \
       _(float,initial_planning_time,initial_planning_time,10.0f) \
+      _(int,h1_max_assigned_robots,h1_max_assigned_robots,MAX_ASSIGNED_ROBOTS_NOLIMIT) \
+      _(bool,h2_only_allow_adjacent_assignment,h2_only_allow_adjacent_assignment,false) \
+      _(bool,h3_force_assistance,h3_force_assistance,false) \
+      _(float,h4_unhelpful_robot_penalty,h4_unhelpful_robot_penalty,0.0f) \
 
       Params_STRUCT(PARAMS)
 #undef PARAMS
@@ -62,7 +69,7 @@ namespace utexas_guidance {
                               float& post_action_timeout,
                               boost::shared_ptr<RNG> rng) const;
 
-      virtual void unrollAction(const State& state, const Action& action, State& prev_state) const;
+      /* virtual void unrollAction(const State& state, const Action& action, State& prev_state) const; */
 
       virtual void getActionsAtState(const utexas_planning::State::ConstPtr& state,
                                      std::vector<utexas_planning::Action::ConstPtr>& actions) const;

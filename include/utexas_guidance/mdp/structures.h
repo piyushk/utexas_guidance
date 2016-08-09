@@ -66,7 +66,7 @@ namespace utexas_guidance {
     int tau_d;
     float tau_t;
     float tau_total_task_time;
-    int tau_u;
+    float tau_u;
 
     bool is_leading_person;
     int help_destination;
