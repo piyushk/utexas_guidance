@@ -287,8 +287,8 @@ namespace utexas_guidance {
     std::vector<float> human_speeds(state.requests.size());
 
     /* First compute new human locations for humans that have exactly reached a particular graph node. */
-    for (int i = 0; i < state.requests.size(); ++i) {
-      RequestState& rs = state.requests[i];
+    for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
+      RequestState& rs = state.requests[request_id];
       if (rs.loc_p == 1.0f) {
         // Choose the next node for this person
         int loc_prev = rs.loc_node;
@@ -301,18 +301,18 @@ namespace utexas_guidance {
 
       // Figure out what pace the human is gonna move in.
       if (!onSameFloor(rs.loc_prev, rs.loc_node, graph_)) {
-        human_speeds[i] = (rs.assist_type == LEAD_PERSON) ? elevator_robot_speed_ : elevator_human_speed_;
+        human_speeds[request_id] = (rs.assist_type == LEAD_PERSON) ? elevator_robot_speed_ : elevator_human_speed_;
       } else {
-        human_speeds[i] = (rs.assist_type == LEAD_PERSON) ? robot_speed_ : human_speed_;
+        human_speeds[request_id] = (rs.assist_type == LEAD_PERSON) ? robot_speed_ : human_speed_;
       }
 
-      float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speeds[i];
+      float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speeds[request_id];
       if (rs.assist_type == LEAD_PERSON && rs.loc_p == 1.0f && rs.loc_node == rs.assist_loc) {
         time_to_dest = 10.0f;
       }
 
       // std::cout << shortest_distances_[rs.loc_prev][rs.loc_node] << std::endl;
-      // std::cout << human_speeds[i] << std::endl;
+      // std::cout << human_speeds[request_id] << std::endl;
       total_time = std::min(total_time, time_to_dest);
     }
 
@@ -320,18 +320,28 @@ namespace utexas_guidance {
       total_time = std::min(max_time, total_time);
     }
 
+    std::vector<int> robot_release_candidate;
     /* total_time now reflects when the first human is going to reach a destination node. Increment all humans by
      * this time. */
-    for (int i = 0; i < state.requests.size(); ++i) {
-      RequestState& rs = state.requests[i];
+    for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
+      RequestState& rs = state.requests[request_id];
       if (rs.loc_prev != rs.loc_node) {
-        float distance_covered = total_time * human_speeds[i];
+        float distance_covered = total_time * human_speeds[request_id];
         rs.loc_p += distance_covered / shortest_distances_[rs.loc_prev][rs.loc_node]; // Should be atmost 1.
       }
 
       // Atleast one of the following should be 1, but no real need to check that.
       if (rs.loc_p > 1.0f - 1e-6f) {
         rs.loc_p = 1.0f;
+        if (rs.assist_type == LEAD_PERSON && requestComplete(rs)) {
+          // Find robot that helped this person.
+          for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+            RobotState& robot = state.robots[robot_id];
+            if (robot.is_leading_person && robot.help_destination == rs.loc_node) {
+              robot_release_candidate.push_back(robot_id);
+            }
+          }
+        }
         rs.assist_type = NONE;
         rs.assist_loc = NONE;
       }
@@ -344,8 +354,8 @@ namespace utexas_guidance {
     /* Move all robots using total_time.*/
 
     // Optimized!!!
-    for (int i = 0; i < state.robots.size(); ++i) {
-      RobotState& robot = state.robots[i];
+    for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+      RobotState& robot = state.robots[robot_id];
 
       float robot_time_remaining = total_time;
       bool robot_in_use = robot.help_destination != NONE;
@@ -370,7 +380,7 @@ namespace utexas_guidance {
             // Check if the robot can complete this task and move on to the next task.
             if (robot.tau_t > robot.tau_total_task_time) {
               robot_time_remaining = robot.tau_t - robot.tau_total_task_time;
-              task_generation_model->generateNewTaskForRobot(i, robot, rng);
+              task_generation_model->generateNewTaskForRobot(robot_id, robot, rng);
               // Update the destination for this robot.
               destination = robot.tau_d;
             }
@@ -445,6 +455,10 @@ namespace utexas_guidance {
       // If a robot is exactly at his help destination, remove specific request_id allocation.
       if (robot_in_use && isRobotExactlyAt(robot, destination)) {
         robot.is_leading_person = false;
+        if (std::find(robot_release_candidate.begin(), robot_release_candidate.end(), robot_id) !=
+            robot_release_candidate.end()) {
+          robot.help_destination = NONE;
+        }
       }
     }
 
