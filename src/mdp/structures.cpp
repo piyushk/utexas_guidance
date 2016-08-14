@@ -11,9 +11,8 @@ namespace utexas_guidance {
 
   /* Action */
 
-  Action::Action() : type(WAIT), robot_id(0), node(0) {}
-  Action::Action(ActionType a, int robot_id, int node, int request_id) :
-    type(a), robot_id(robot_id), node(node), request_id(request_id) {}
+  Action::Action(ActionType a, int robot_id, int node, int request_id, int old_help_destination) :
+    type(a), robot_id(robot_id), node(node), request_id(request_id), old_help_destination(old_help_destination) {}
   Action::~Action() {}
 
   bool Action::operator<(const utexas_planning::Action& other_base) const {
@@ -23,6 +22,7 @@ namespace utexas_guidance {
       COMPARE_MEMBER(robot_id);
       COMPARE_MEMBER(node);
       COMPARE_MEMBER(request_id);
+      COMPARE_MEMBER(old_help_destination);
       return false;
     } catch(const std::bad_cast& exp) {
       throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
@@ -35,7 +35,8 @@ namespace utexas_guidance {
       return ((type == other.type) &&
               (robot_id == other.robot_id) &&
               (node == other.node) &&
-              (request_id == other.request_id));
+              (request_id == other.request_id) &&
+              (old_help_destination == other.old_help_destination));        
     } catch(const std::bad_cast& exp) {
       throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
     }
@@ -60,6 +61,7 @@ namespace utexas_guidance {
     boost::hash_combine(seed, robot_id);
     boost::hash_combine(seed, node);
     boost::hash_combine(seed, request_id);
+    boost::hash_combine(seed, old_help_destination);
     return seed;
   }
 

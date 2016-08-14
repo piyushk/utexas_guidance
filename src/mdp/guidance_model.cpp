@@ -175,6 +175,26 @@ namespace utexas_guidance {
     next_state_base = boost::static_pointer_cast<const utexas_planning::State>(next_state);
   }
 
+  void GuidanceModel::unrollState(const State& state, State& root_state) const {
+    root_state = state;
+    for (int action_idx = 0; action_idx < state.actions_since_wait.size(); ++action_idx) {
+      const Action& action = root_state.actions_since_wait[action_idx];
+      if (action.type == ASSIGN_ROBOT) {
+       root_state.robots[action.robot_id].help_destination = action.old_help_destination;
+      } else if (action.type == RELEASE_ROBOT) {
+        root_state.robots[action.robot_id].help_destination = action.old_help_destination;
+      } else {
+        root_state.requests[action.request_id].assist_type = NONE;
+        root_state.requests[action.request_id].assist_loc = NONE;
+        if (action.type == LEAD_PERSON) {
+          root_state.robots[action.robot_id].help_destination = action.old_help_destination;
+          root_state.robots[action.robot_id].is_leading_person = false;
+        }
+      }
+    }
+    root_state.actions_since_wait.clear();
+  }
+
   void GuidanceModel::getActionsAtState(const utexas_planning::State::ConstPtr& state_base,
                                         std::vector<utexas_planning::Action::ConstPtr>& actions) const {
     actions.clear();
@@ -201,7 +221,11 @@ namespace utexas_guidance {
       for (unsigned int robot = min_releasable_idx; robot < state->robots.size(); ++robot) {
         if ((state->robots[robot].help_destination != NONE) &&
             !(state->robots[robot].is_leading_person)) {
-          actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT, robot)));
+          actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT, 
+                                                   robot, 
+                                                   NONE,
+                                                   NONE,
+                                                   state->robots[robot].help_destination)));
           ++action_counter;
         }
       }
@@ -267,7 +291,12 @@ namespace utexas_guidance {
                 actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size() + 1);
                 for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
                   actions[action_counter] =
-                    Action::Ptr(new Action(LEAD_PERSON, robot_id, adjacent_vertices_map_[exact_loc][adj], request_id));
+                    Action::Ptr(new Action(LEAD_PERSON, 
+                                           robot_id, 
+                                           adjacent_vertices_map_[exact_loc][adj], 
+                                           request_id,
+                                           state->robots[robot_id].help_destination
+                                           ));
                   ++action_counter;
                 }
                 actions[action_counter] = Action::Ptr(new Action(LEAD_PERSON, robot_id, exact_loc, request_id));
@@ -295,7 +324,12 @@ namespace utexas_guidance {
         if (!params_.h2_only_allow_adjacent_assignment) {
           actions.resize(action_counter + num_vertices_);
           for (unsigned int node = 0; node < num_vertices_; ++node) {
-            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, node));
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, 
+                                                             robot_id, 
+                                                             node,
+                                                             NONE,
+                                                             state->robots[robot_id].help_destination
+                                                             ));
             ++action_counter;
           }
         } else {
@@ -306,16 +340,36 @@ namespace utexas_guidance {
             actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size() + 1);
             for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
               actions[action_counter] =
-                Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, adjacent_vertices_map_[exact_loc][adj]));
+                Action::Ptr(new Action(ASSIGN_ROBOT, 
+                                       robot_id, 
+                                       adjacent_vertices_map_[exact_loc][adj],
+                                       NONE,
+                                       state->robots[robot_id].help_destination
+                                       ));
               ++action_counter;
             }
-            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, exact_loc));
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, 
+                                                             robot_id, 
+                                                             exact_loc,
+                                                             NONE,
+                                                             state->robots[robot_id].help_destination
+                                                             ));
             ++action_counter;
           } else {
             actions.resize(action_counter + 2);
-            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, state->robots[robot_id].loc_u));
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, 
+                                                             robot_id, 
+                                                             state->robots[robot_id].loc_u,
+                                                             NONE,
+                                                             state->robots[robot_id].help_destination
+                                                             ));
             ++action_counter;
-            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, robot_id, state->robots[robot_id].loc_v));
+            actions[action_counter] = Action::Ptr(new Action(ASSIGN_ROBOT, 
+                                                             robot_id, 
+                                                             state->robots[robot_id].loc_v,
+                                                             NONE,
+                                                             state->robots[robot_id].help_destination
+                                                             ));
             ++action_counter;
           }
         }

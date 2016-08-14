@@ -10,6 +10,8 @@
 
 namespace utexas_guidance {
 
+  const static int NONE = -1;
+
   /* Actions - need to be named differently from previous ActionTypes*/
   enum ActionType {
     WAIT = 0,
@@ -26,8 +28,11 @@ namespace utexas_guidance {
       typedef boost::shared_ptr<Action> Ptr;
       typedef boost::shared_ptr<const Action> ConstPtr;
 
-      Action();
-      Action(ActionType a, int robot_id = 0, int node = 0, int request_id = 0);
+      Action(ActionType a = WAIT, 
+             int robot_id = NONE, 
+             int node = NONE, 
+             int request_id = NONE, 
+             int old_help_destination = NONE);
       virtual ~Action();
 
       virtual bool operator<(const utexas_planning::Action& other) const;
@@ -43,6 +48,8 @@ namespace utexas_guidance {
       int node; // with ASSIGN, identifies assigned location.
                 // with DIRECT_PERSON or LEAD_PERSON, identifies the direction the robot should guide/lead to.
       int request_id; // with DIRECT_PERSON or LEAD_PERSON, identifies the request id being served.
+      int old_help_destination; // with release, assign, or lead, indicates old help destination. This allows
+                                // non wait actions to be invertible.
 
     private:
 
@@ -52,6 +59,7 @@ namespace utexas_guidance {
         ar & BOOST_SERIALIZATION_NVP(robot_id);
         ar & BOOST_SERIALIZATION_NVP(node);
         ar & BOOST_SERIALIZATION_NVP(request_id);
+        ar & BOOST_SERIALIZATION_NVP(old_help_destination);
       }
 
   };

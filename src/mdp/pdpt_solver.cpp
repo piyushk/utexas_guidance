@@ -53,41 +53,38 @@ namespace utexas_guidance {
 
   utexas_planning::Action::ConstPtr PDPTSolver::getBestAction(const utexas_planning::State::ConstPtr& state_base) const {
   
-    State::ConstPtr state = boost::dynamic_pointer_cast<const State>(state_base);
-    if (!state) {
+    State::ConstPtr current_state = boost::dynamic_pointer_cast<const State>(state_base);
+    if (!current_state) {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
+
+    State state;
+    model_->unrollState(*current_state, state);
+
     float robot_speed = motion_model_->getRobotSpeed();
 
-    std::vector<std::pair<int, int> > robot_request_ids;
-    getColocatedRobotRequestIds(*state, robot_request_ids);
-    std::vector<bool> available_robots(state->robots.size(), false);
-    for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
-      if ((robot.help_destination == NONE) || (!robot.is_leading_person)) {
-        
-      }||
-    }
+    float max_lookahed_time = 150.0f;
 
-    std::vector<std::vector<RobotFutureLocation> > future_robot_locations(state->robots.size());
+    std::vector<std::vector<RobotFutureLocation> > robot_future_locations(state.robots.size());
+    for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+      const RobotState& robot = state.robots[robot_id];
+      std::vector<RobotFutureLocation>& robot_future_location = robot_future_locations[robot_id];
+      if (!robot.is_leading_person) {
 
-    for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
-      const RobotState& robot = state->robots[robot_idx];
-      std::vector<RobotFutureLocation>& future_robot_location = future_robot_locations[robot_idx];
-      if ((robot.help_destination == NONE) ||
-          (!robot.is_leading_person) ||
-          ) {
+        // TODO: Make sure that this is not the only other robot colocated with a human.
         float total_robot_time = 0.0f;
         int current_loc = robot.loc_u;
+        float current_destination = (robot.help_destination != NONE) ? robot.help_destination : robot.tau_d;
 
         RobotState current_task(robot);
         current_task.tau_total_task_time -= current_task.tau_t;
 
-        if (!isRobotExactlyAt(robot, robot.tau_d)) {
+        if (!isRobotExactlyAt(robot, current_destination)) {
           float current_edge_distance = shortest_distances_[robot.loc_u][robot.loc_v];
           float distance_to_u = robot.loc_p * current_edge_distance;
           float distance_to_v = current_edge_distance - distance_to_u;
-          float distance_from_u = shortest_distances_[robot.loc_u][robot.tau_d] + distance_to_u;
-          float distance_from_v = shortest_distances_[robot.loc_v][robot.tau_d] + distance_to_v;
+          float distance_from_u = shortest_distances_[robot.loc_u][robot.current_destination] + distance_to_u;
+          float distance_from_v = shortest_distances_[robot.loc_v][robot.current_destination] + distance_to_v;
 
           if (distance_from_u < distance_from_v) {
             total_robot_time += distance_to_u / robot_speed;
@@ -96,32 +93,39 @@ namespace utexas_guidance {
             total_robot_time += distance_to_v / robot_speed;
           }
         } else {
-          current_loc = robot.tau_d;
+          current_loc = current_destination;
         }
 
-        // TODO this time needs to be parametrized somehow.
-        while (total_robot_time <= 150.0f) {
+        while (total_robot_time <= max_lookahead_time) {
           RobotFutureLocation future_loc;
           future_loc.loc = current_loc;
           future_loc.time_arrive = total_robot_time;
           future_loc.time_leave = total_robot_time;
           future_loc.tau_d = current_task.tau_d;
-          if (current_loc == current_task.tau_d) {
-            total_robot_time += current_task.tau_total_task_time;
-            future_loc.time_leave = total_robot_time;
-            RNG unused_rng(0);
-            task_model_->generateNewTaskForRobot(robot_idx, current_task, unused_rng); // Fixed task only.
+          if (current_loc == current_destination) {
+            if (robot.help_destination != NONE) {
+              total_robot_time += current_task.tau_total_task_time;
+              future_loc.time_leave = total_robot_time;
+              robot_future_location.push_back(future_loc);
+              RNG unused_rng(0);
+              task_model_->generateNewTaskForRobot(robot_id, current_task, unused_rng); // Fixed task only.
+              current_destination = current_task.tau_d;
+            } else {
+              total_robot_time = max_lookahead_time;
+              future_loc.time_leave = total_robot_time;
+              robot_future_location.push_back(future_loc);
+              break;
+            }
           }
-          future_robot_location.push_back(future_loc);
-          int next_loc = shortest_paths_[current_loc][current_task.tau_d][0];
+          int next_loc = shortest_paths_[current_loc][current_destination][0];
           total_robot_time += shortest_distances_[current_loc][next_loc] / robot_speed;
           current_loc = next_loc;
         }
         
-        // std::cout << "For robot idx " << robot_idx << ":-" << std::endl;
-        // for (int future_location_idx = 0; future_location_idx < future_robot_location.size(); ++future_location_idx) {
-        //   std::cout << "  " << future_robot_location[future_location_idx].first << "@" << 
-        //     future_robot_location[future_location_idx].second << std::endl;
+        // std::cout << "For robot id " << robot_id << ":-" << std::endl;
+        // for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
+        //   std::cout << "  " << robot_future_location[future_location_id].first << "@" << 
+        //     robot_future_location[future_location_id].second << std::endl;
         // }
       }
     }
@@ -139,12 +143,31 @@ namespace utexas_guidance {
     // a default policy. We could also potentially unroll the most likely trajectory of a human that's not being helped
     // as well, and there's no point going in if max assigned robots is being met as well
 
-    std::vector<std::pair<int, int> > robot_request_ids;
-    getColocatedRobotRequestIds(*state, robot_request_ids);
-    for (unsigned int idx_num = 0; idx_num < robot_request_ids.size(); ++idx_num) {
-      int lead_robot_idx = robot_request_ids[idx_num].first;
-      int request_id = robot_request_ids[idx_num].second;
-      const RequestState& request = state->requests[request_id];
+    for (int request_id = 0; request_id < state.requests.size(); ++request_id) {
+      const RequestState& request = state.requests[request_id];
+
+      // Can't do anything for this request.
+      if (request.loc_p != 1.0f) {
+        continue;
+      }
+
+      // Find colocated robot.
+      int lead_robot_id = NONE;
+      for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+        const RobotState& robot = state.robots
+        // TODO: It may be necessary for the lead robot to be assigned to the current location. Test it out.
+        if (isRobotExactlyAt(robot, request.loc_node)) {
+          // && robot.help_destination == request.loc_node) {
+          lead_robot_id = robot_id;
+          break;
+        }
+      }
+
+      if (lead_robot_id == NONE) {
+        // There's nothing we can do for this human, as not robots are present. 
+        // TODO: Maybe use an arbitrary model to predict the future path?
+        continue;
+      }
 
       // Figure out if you need to:
       //  - lead person to the goal.
@@ -159,39 +182,46 @@ namespace utexas_guidance {
       // TODO: add some code to handle elevators as well.
       // Calculate time to which we're interested, which is the time until the next lead action will be executed, and
       // see if some assignments need to take place in that time.
-      float max_time = 150.0f;
-      std::vector<int> first_intersection(state->robots.size(), -1);
       float max_relative_reward = 0.0f;
-      int exchange_idx = -1;
-      int max_intersection_idx = -1;
+      int exchange_id = -1;
+      int max_intersection_id = -1;
       bool assign_robot_to_intersection = false;
 
-      for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
+      for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+
+        if (robot_id == lead_robot_id) {
+          continue;
+        }
 
         // See if the current path of this robot is going to intersect with the request we're interested in.
-        std::vector<std::pair<int, float> >& future_robot_location = future_robot_locations[robot_idx];
+        std::vector<RobotFutureLocation>& robot_future_location = robot_future_locations[robot_id];
+
+        if (robot_future_location.size() == 0) {
+          continue;
+        } 
+
+        // See if there is an intersection of the current request with this robot, and if there is, also record the
+        // location prior to the intersection. If the location prior to the intersection is not on the same floor as the
+        // intersection location, then final action will be direct. 
+        // Also this feature should be exposed via a parameter.
         RobotFutureLocation intersection;
         intersection.loc = -1;
         int location_prior_to_intersection = -1;
-        for (int future_location_idx = 0; future_location_idx < future_robot_location.size(); ++future_location_idx) {
-          
-          if (future_robot_location[future_location_idx].time_arrive > max_time) {
-            break;
-          }
+        for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
 
           // Figure out if there is a direct intersection.
-          if (request.loc_node == future_robot_location[future_location_idx].loc) {
-            intersection = future_robot_location[future_location_idx];
+          if (request.loc_node == robot_future_location[future_location_id].loc) {
+            intersection = robot_future_location[future_location_id];
           }
 
           location_prior_to_intersection = request.loc_node;
-          for (int path_counter_idx = 0; 
-               path_counter_idx < shortest_paths_[request.loc_node][request.goal]; 
-               ++path_counter_idx) {
-            if (shortest_paths_[request.loc_node][request.goal][path_counter_idx] == 
+          for (int path_counter_id = 0; 
+               path_counter_id < shortest_paths_[request.loc_node][request.goal]; 
+               ++path_counter_id) {
+            if (shortest_paths_[request.loc_node][request.goal][path_counter_id] == 
             location_prior_to_intersection = 
               shortest_paths_[request.loc_node][request.goal].end()) {
-            intersection = future_robot_location[future_location_idx];
+            intersection = robot_future_location[future_location_id];
             break;
           }
 
@@ -200,47 +230,47 @@ namespace utexas_guidance {
         float relative_reward = 0.0f;
         if (intersection.loc != -1) {
           // First calculate the reward loss due to wait at the intersection point.
-          float lead_time_to_intersection = robot_speed * shortest_distances_[request_.loc_node][intersection_idx];
+          float lead_time_to_intersection = robot_speed * shortest_distances_[request_.loc_node][intersection_id];
           if (lead_time_to_intersection > robot_time_to_intersection) {
             // TODO: This is buggy, since the robot can do work during this time. You need the to know if they're gonna
             // wait at each location they visit as well.
             // TODO: This assumes the task utility is same across all background tasks. You need to store the task
             // utility per task as well. Overall it's starting to look like you need a better data structure than pair.
-            reward -= state->robots[robot_idx].tau_u * (lead_time_to_intersection - robot_time_to_intersection);
+            reward -= state.robots[robot_id].tau_u * (lead_time_to_intersection - robot_time_to_intersection);
           } else {
             // TODO: This assumes the task utility is same across all background tasks. You need to store the task
             // utility per task as well. Overall it's starting to look like you need a better data structure than pair.
-            reward -= (1.0f + state->robots[lead_robot_idx].tau_u) * (lead_time_to_intersection - robot_time_to_intersection);
+            reward -= (1.0f + state.robots[lead_robot_id].tau_u) * (lead_time_to_intersection - robot_time_to_intersection);
           }
 
           // Next, calculate the reward loss by assigning the new robot. You need the destination of the robot at the
           // time of intersection. 
           // TODO: This is buggy. You don't have that destination yet.
           float time_to_service_destination_before_action =
-            robot_speed * shortest_distances_[intersection_idx][destination_at_time_of_intersection];
+            robot_speed * shortest_distances_[intersection_id][destination_at_time_of_intersection];
           float time_to_service_destination_after_action =
             robot_speed * shortest_distances_[request->goal][destination_at_time_of_intersection];
           float leading_time = 
-            robot_speed * shortest_distances_[intersection_idx][request->goal];
+            robot_speed * shortest_distances_[intersection_id][request->goal];
           float extra_time_to_service_destination = 
             leading_time + time_to_service_destination_after_action - time_to_service_destination_before_action;
-          reward -= state->robots[robot_idx].tau_u * extra_time_to_service_destination;
+          reward -= state.robots[robot_id].tau_u * extra_time_to_service_destination;
 
           // Next calculate the reward gain by early relief of the original leading robot.
           float time_to_service_destination_before_action =
-            robot_speed * shortest_distances_[request->goal][state->robots[lead_robot_idx].tau_d];
+            robot_speed * shortest_distances_[request->goal][state.robots[lead_robot_id].tau_d];
           float time_to_service_destination_after_action =
-            robot_speed * shortest_distances_[intersection_idx][state->robots[lead_robot_idx].tau_d];
+            robot_speed * shortest_distances_[intersection_id][state.robots[lead_robot_id].tau_d];
           float time_not_spent_leading = 
-            robot_speed * shortest_distances_[intersection_idx][request->goal];
+            robot_speed * shortest_distances_[intersection_id][request->goal];
           float time_saved = 
             time_not_spent_leading + time_to_service_destination_before_action - time_to_service_destination_before_action;
-          reward += state->robots[lead_robot_idx].tau_u * extra_time_to_service_destination;
+          reward += state.robots[lead_robot_id].tau_u * extra_time_to_service_destination;
 
           if (reward > max_relative_reward) {
             max_relative_reward = reward;
-            exchange_idx = robot_idx;
-            max_intersection_idx = intersection_idx;
+            exchange_id = robot_id;
+            max_intersection_id = intersection_id;
             // TODO: this is buggy, should use end time at the location, similar to reward.
             if (robot_time_to_intersection < 
           }
@@ -255,7 +285,7 @@ namespace utexas_guidance {
       // from moving past the intersection point. This might be merged with the last condition.
 
       // Get shortest path to goal for this request, and see if swapping will help. 
-      Action a(LEAD_PERSON, lead_robot_idx, shortest_paths_[request.loc_node][request.goal][0], request_id);
+      Action a(LEAD_PERSON, lead_robot_id, shortest_paths_[request.loc_node][request.goal][0], request_id);
       std::vector<utexas_planning::Action::ConstPtr>::const_iterator it = 
         std::find_if(actions.begin(), actions.end(), ActionEquals(a));
       if (it != actions.end()) {
@@ -264,18 +294,18 @@ namespace utexas_guidance {
     }
 
     int num_assigned_robots = 0;
-    for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
-      if (state->robots[robot_idx].help_destination != NONE) {
+    for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+      if (state.robots[robot_id].help_destination != NONE) {
         ++num_assigned_robots;
       }
     }
 
     /* This logic isn't the best as the default policy, but better than nothing to prevent unnecessary robots. */
-    if (num_assigned_robots > state->requests.size()) {
-      for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
-        if (state->robots[robot_idx].help_destination != NONE &&
-            !(state->robots[robot_idx].is_leading_person)) {
-          Action a(RELEASE_ROBOT, robot_idx);
+    if (num_assigned_robots > state.requests.size()) {
+      for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+        if (state.robots[robot_id].help_destination != NONE &&
+            !(state.robots[robot_id].is_leading_person)) {
+          Action a(RELEASE_ROBOT, robot_id);
           std::vector<utexas_planning::Action::ConstPtr>::const_iterator it = 
             std::find_if(actions.begin(), actions.end(), ActionEquals(a));
           if (it != actions.end()) {

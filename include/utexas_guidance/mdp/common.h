@@ -8,8 +8,6 @@
 
 namespace utexas_guidance {
 
-  const static int NONE = -1;
-
   bool isShortestPathThroughLocU(int loc_u,
                                  int loc_v,
                                  float loc_p,
