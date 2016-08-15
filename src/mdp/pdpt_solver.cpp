@@ -306,6 +306,7 @@ namespace utexas_guidance {
           std::cout << "  time saved: " << time_saved << std::endl;
 
           if (reward > max_relative_reward) {
+            std::cout << "exchanging robots. " << std::endl;
             max_relative_reward = reward;
             exchange_robot_id = robot_id;
             best_intersection = intersection;
