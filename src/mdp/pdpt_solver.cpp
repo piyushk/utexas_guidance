@@ -111,7 +111,6 @@ namespace utexas_guidance {
             if (robot.help_destination != NONE) {
               total_robot_time += current_task.tau_total_task_time;
               future_loc.time_leave = total_robot_time;
-              robot_future_location.push_back(future_loc);
               RNG unused_rng(0);
               task_model_->generateNewTaskForRobot(robot_id, current_task, unused_rng); // Fixed task only.
               current_destination = current_task.tau_d;
@@ -122,15 +121,17 @@ namespace utexas_guidance {
               break;
             }
           }
+          robot_future_location.push_back(future_loc);
           int next_loc = shortest_paths_[current_loc][current_destination][0];
           total_robot_time += shortest_distances_[current_loc][next_loc] / robot_speed;
           current_loc = next_loc;
         }
-        
+
         // std::cout << "For robot id " << robot_id << ":-" << std::endl;
         // for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
-        //   std::cout << "  " << robot_future_location[future_location_id].first << "@" << 
-        //     robot_future_location[future_location_id].second << std::endl;
+        //   std::cout << "  " << robot_future_location[future_location_id].loc << "@" << 
+        //     robot_future_location[future_location_id].time_arrive << "-" <<
+        //     robot_future_location[future_location_id].time_leave << std::endl;
         // }
       }
     }
@@ -162,7 +163,7 @@ namespace utexas_guidance {
         const RobotState& robot = state.robots[robot_id];
         // TODO: It may be necessary for the lead robot to be assigned to the current location. Test it out.
         if (isRobotExactlyAt(robot, request.loc_node)) {
-          // && robot.help_destination == request.loc_node) {
+          // && robot.help_destination == request.loc_node) 
           lead_robot_id = robot_id;
           break;
         }
@@ -179,7 +180,7 @@ namespace utexas_guidance {
       //  OR
       //  - assign robot at future position.
       //  - and/or wait at current position,
-      
+
       // First calculate intersection point. If intersection is past one step of the request, or it does not exist, LEAD PERSON.
       // Once intersection point has been calculated - call assign robot if robot will get there first/leave it prior to
       // next call.
@@ -235,10 +236,10 @@ namespace utexas_guidance {
 
         bool use_elevator_hack = true;
         use_elevator_hack = use_elevator_hack && 
-                            location_prior_to_intersection != NONE &&
-                            !onSameFloor(location_prior_to_intersection,
-                                         intersection.loc,
-                                         graph_);
+          location_prior_to_intersection != NONE &&
+          !onSameFloor(location_prior_to_intersection,
+                       intersection.loc,
+                       graph_);
 
         float lead_time_to_previous_intersection = 0.0f;
         if (use_elevator_hack) {
@@ -250,14 +251,18 @@ namespace utexas_guidance {
           human_speed * shortest_distances_[location_prior_to_intersection][intersection.loc];
         use_elevator_hack = use_elevator_hack &&
           direct_elev_lead_time_to_intersection > intersection.time_arrive;
-          
+
         float reward = 0.0f;
         if (intersection.loc != -1) {
+          std::cout << "Request " << request_id << ": have intersecting paths with robot " << robot_id << std::endl;
           // First calculate the reward loss due to wait at the intersection point.
 
           float lead_time_to_intersection = 0.0f;
           if (use_elevator_hack) {
             lead_time_to_intersection = direct_elev_lead_time_to_intersection;
+            reward += shortest_distances_[location_prior_to_intersection][intersection.loc] / robot_speed -
+              shortest_distances_[location_prior_to_intersection][intersection.loc] / human_speed;
+            std::cout << "time gained by directing at the elevator. " << reward << std::endl;
           } else {
             lead_time_to_intersection = robot_speed * shortest_distances_[request.loc_node][intersection.loc];
           }
@@ -266,9 +271,10 @@ namespace utexas_guidance {
           if (lead_time_to_intersection > intersection.time_leave) {
             // We'll have to reserve the robot as soon as it arrives at the location.
             reward -= intersection.tau_u * (lead_time_to_intersection - intersection.time_arrive);
+            std::cout << "  reward due to waiting for lead robot." << reward << std::endl;
           } else if (lead_time_to_intersection < intersection.time_arrive) {
             reward -= (1.0f + state.robots[lead_robot_id].tau_u) * (intersection.time_arrive - lead_time_to_intersection);
-
+            std::cout << "  reward due to waiting for exchange robot." << reward << std::endl;
           } else {
             // The robot's doing work at the intersection location when the person arrives. There's no penalty.
             reward -= 0.0f;
@@ -285,6 +291,7 @@ namespace utexas_guidance {
           float extra_time_to_service_destination = 
             leading_time + time_to_service_destination_after_action - time_to_service_destination_before_action;
           reward -= intersection.tau_u * extra_time_to_service_destination;
+          std::cout << "  extra time to service destination: " << extra_time_to_service_destination << std::endl;
 
           // Next calculate the reward gain by early relief of the original leading robot.
           time_to_service_destination_before_action =
@@ -295,7 +302,8 @@ namespace utexas_guidance {
             robot_speed * shortest_distances_[intersection.loc][request.goal];
           float time_saved = 
             time_not_spent_leading + time_to_service_destination_before_action - time_to_service_destination_before_action;
-          reward += state.robots[lead_robot_id].tau_u * extra_time_to_service_destination;
+          reward += state.robots[lead_robot_id].tau_u * time_saved;
+          std::cout << "  time saved: " << time_saved << std::endl;
 
           if (reward > max_relative_reward) {
             max_relative_reward = reward;
@@ -309,6 +317,7 @@ namespace utexas_guidance {
       }
 
       if (exchange_robot_id != NONE) {
+        std::cout << "Request " << request_id << ": replacing robot " << lead_robot_id << " with " << exchange_robot_id << std::endl;
         // Yay. It looks like we're going to exchange the robot. 
         // First deal with assigning the exchange robot if we're going to be too late getting there.
         // TODO: make the exchange_robot_id unavailable.
@@ -341,47 +350,50 @@ namespace utexas_guidance {
                                                           request_id, 
                                                           state.robots[lead_robot_id].help_destination))); 
           } else {
-          actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
-                                                        lead_robot_id, 
-                                                        next_node, 
-                                                        request_id, 
-                                                        state.robots[lead_robot_id].help_destination))); 
+            actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
+                                                          lead_robot_id, 
+                                                          next_node, 
+                                                          request_id, 
+                                                          state.robots[lead_robot_id].help_destination))); 
           }
         } else {
           // See if you need to wait here for the exchange robot.
           if (!isRobotExactlyAt(state.robots[exchange_robot_id], request.loc_node)) {
-          actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
-                                                        lead_robot_id,
-                                                        request.loc_node,
-                                                        request_id,
-                                                        state.robots[lead_robot_id].help_destination)));
+            actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
+                                                          lead_robot_id,
+                                                          request.loc_node,
+                                                          request_id,
+                                                          state.robots[lead_robot_id].help_destination)));
           } else {
-          actions.push_back(Action::ConstPtr(new Action(RELEASE_ROBOT, 
-                                                        lead_robot_id, 
-                                                        NONE, 
-                                                        NONE, 
-                                                        state.robots[lead_robot_id].help_destination))); 
+            actions.push_back(Action::ConstPtr(new Action(RELEASE_ROBOT, 
+                                                          lead_robot_id, 
+                                                          NONE, 
+                                                          NONE, 
+                                                          state.robots[lead_robot_id].help_destination))); 
             // Continue leading the robot.
             int next_node = 
               shortest_paths_[state.requests[request_id].loc_node][state.requests[request_id].goal][0];
-              actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
-                                                            exchange_robot_id, 
-                                                            next_node, 
-                                                            request_id, 
-                                                            state.robots[exchange_robot_id].help_destination))); 
+            actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
+                                                          exchange_robot_id, 
+                                                          next_node, 
+                                                          request_id, 
+                                                          state.robots[exchange_robot_id].help_destination))); 
           }
         }
       } else {
         // Continue leading the robot.
         int next_node = 
           shortest_paths_[state.requests[request_id].loc_node][state.requests[request_id].goal][0];
-          actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
-                                                        lead_robot_id, 
-                                                        next_node, 
-                                                        request_id, 
-                                                        state.robots[lead_robot_id].help_destination))); 
+        actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
+                                                      lead_robot_id, 
+                                                      next_node, 
+                                                      request_id, 
+                                                      state.robots[lead_robot_id].help_destination))); 
       }
+
     }
+
+    throw std::runtime_error("blah!");
 
     return Action::ConstPtr(new Action(WAIT));
   }
@@ -399,7 +411,7 @@ namespace utexas_guidance {
   }
 
   std::string PDPTSolver::getName() const {
-    return std::string("SingleRobot");
+    return std::string("PDPTSolver");
   }
 
 } /* utexas_guidance */
