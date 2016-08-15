@@ -26,7 +26,7 @@ namespace utexas_guidance {
     float time_leave;
     int tau_d;
     float tau_u;
-  }
+  };
 
   PDPTSolver::~PDPTSolver() {}
 
@@ -62,9 +62,12 @@ namespace utexas_guidance {
     State state;
     model_->unrollState(*current_state, state);
 
+    float human_speed = motion_model_->getHumanSpeed();
     float robot_speed = motion_model_->getRobotSpeed();
 
-    float max_lookahed_time = 150.0f;
+    std::vector<Action::ConstPtr> actions;
+
+    float max_lookahead_time = 150.0f;
 
     std::vector<std::vector<RobotFutureLocation> > robot_future_locations(state.robots.size());
     for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
@@ -84,8 +87,8 @@ namespace utexas_guidance {
           float current_edge_distance = shortest_distances_[robot.loc_u][robot.loc_v];
           float distance_to_u = robot.loc_p * current_edge_distance;
           float distance_to_v = current_edge_distance - distance_to_u;
-          float distance_from_u = shortest_distances_[robot.loc_u][robot.current_destination] + distance_to_u;
-          float distance_from_v = shortest_distances_[robot.loc_v][robot.current_destination] + distance_to_v;
+          float distance_from_u = shortest_distances_[robot.loc_u][current_destination] + distance_to_u;
+          float distance_from_v = shortest_distances_[robot.loc_v][current_destination] + distance_to_v;
 
           if (distance_from_u < distance_from_v) {
             total_robot_time += distance_to_u / robot_speed;
@@ -156,7 +159,7 @@ namespace utexas_guidance {
       // Find colocated robot.
       int lead_robot_id = NONE;
       for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
-        const RobotState& robot = state.robots
+        const RobotState& robot = state.robots[robot_id];
         // TODO: It may be necessary for the lead robot to be assigned to the current location. Test it out.
         if (isRobotExactlyAt(robot, request.loc_node)) {
           // && robot.help_destination == request.loc_node) {
@@ -219,7 +222,7 @@ namespace utexas_guidance {
 
           location_prior_to_intersection = request.loc_node;
           for (int path_counter_id = 0; 
-               path_counter_id < shortest_paths_[request.loc_node][request.goal]; 
+               path_counter_id < shortest_paths_[request.loc_node][request.goal].size(); 
                ++path_counter_id) {
             if (shortest_paths_[request.loc_node][request.goal][path_counter_id] == 
                 robot_future_location[future_location_id].loc) {
@@ -240,7 +243,7 @@ namespace utexas_guidance {
         float lead_time_to_previous_intersection = 0.0f;
         if (use_elevator_hack) {
           lead_time_to_previous_intersection = 
-            robot_speed * shortest_distances_[request_.loc_node][location_prior_to_intersection];
+            robot_speed * shortest_distances_[request.loc_node][location_prior_to_intersection];
         }
 
         float direct_elev_lead_time_to_intersection = lead_time_to_previous_intersection + 
@@ -248,7 +251,7 @@ namespace utexas_guidance {
         use_elevator_hack = use_elevator_hack &&
           direct_elev_lead_time_to_intersection > intersection.time_arrive;
           
-        float relative_reward = 0.0f;
+        float reward = 0.0f;
         if (intersection.loc != -1) {
           // First calculate the reward loss due to wait at the intersection point.
 
@@ -256,7 +259,7 @@ namespace utexas_guidance {
           if (use_elevator_hack) {
             lead_time_to_intersection = direct_elev_lead_time_to_intersection;
           } else {
-            lead_time_to_intersection = robot_speed * shortest_distances_[request_.loc_node][intersection.loc];
+            lead_time_to_intersection = robot_speed * shortest_distances_[request.loc_node][intersection.loc];
           }
 
           // First compute reward due to waiting.
@@ -276,20 +279,20 @@ namespace utexas_guidance {
           float time_to_service_destination_before_action =
             robot_speed * shortest_distances_[intersection.loc][intersection.tau_d];
           float time_to_service_destination_after_action =
-            robot_speed * shortest_distances_[request->goal][intersection.tau_d];
+            robot_speed * shortest_distances_[request.goal][intersection.tau_d];
           float leading_time = 
-            robot_speed * shortest_distances_[intersection.loc][request->goal];
+            robot_speed * shortest_distances_[intersection.loc][request.goal];
           float extra_time_to_service_destination = 
             leading_time + time_to_service_destination_after_action - time_to_service_destination_before_action;
           reward -= intersection.tau_u * extra_time_to_service_destination;
 
           // Next calculate the reward gain by early relief of the original leading robot.
-          float time_to_service_destination_before_action =
-            robot_speed * shortest_distances_[request->goal][state.robots[lead_robot_id].tau_d];
-          float time_to_service_destination_after_action =
+          time_to_service_destination_before_action =
+            robot_speed * shortest_distances_[request.goal][state.robots[lead_robot_id].tau_d];
+          time_to_service_destination_after_action =
             robot_speed * shortest_distances_[intersection.loc][state.robots[lead_robot_id].tau_d];
           float time_not_spent_leading = 
-            robot_speed * shortest_distances_[intersection.loc][request->goal];
+            robot_speed * shortest_distances_[intersection.loc][request.goal];
           float time_saved = 
             time_not_spent_leading + time_to_service_destination_before_action - time_to_service_destination_before_action;
           reward += state.robots[lead_robot_id].tau_u * extra_time_to_service_destination;
@@ -314,11 +317,11 @@ namespace utexas_guidance {
           // TODO: This might be a mistake.
         } else {
           if (best_intersection.time_leave < best_lead_time_to_intersection) {
-            actions.push_back(new Action(ASSIGN_ROBOT, 
-                                         exchange_robot_id, 
-                                         best_intersection.loc,
-                                         NONE.
-                                         state.robots[exchange_robot_id].help_destination));
+            actions.push_back(Action::ConstPtr(new Action(ASSIGN_ROBOT, 
+                                                          exchange_robot_id, 
+                                                          best_intersection.loc,
+                                                          NONE,
+                                                          state.robots[exchange_robot_id].help_destination)));
           }
         }
 
@@ -326,57 +329,57 @@ namespace utexas_guidance {
         if (request.loc_node != best_intersection.loc) {
           int next_node = 
             shortest_paths_[state.requests[request_id].loc_node][state.requests[request_id].goal][0];
-          if (next_node == best_intersection.loc && use_elevator_hack) {
-            actions.push_back(new Action(RELEASE_ROBOT, 
-                                         lead_robot_id, 
-                                         NONE, 
-                                         NONE, 
-                                         state.robots[lead_robot_id].help_destination)); 
-            actions.push_back(new Action(DIRECT_PERSON, 
-                                         lead_robot_id, 
-                                         next_node, 
-                                         request_id, 
-                                         state.robots[lead_robot_id].help_destination)); 
+          if (next_node == best_intersection.loc && best_use_elevator_hack) {
+            actions.push_back(Action::ConstPtr(new Action(RELEASE_ROBOT, 
+                                                          lead_robot_id, 
+                                                          NONE, 
+                                                          NONE, 
+                                                          state.robots[lead_robot_id].help_destination))); 
+            actions.push_back(Action::ConstPtr(new Action(DIRECT_PERSON, 
+                                                          lead_robot_id, 
+                                                          next_node, 
+                                                          request_id, 
+                                                          state.robots[lead_robot_id].help_destination))); 
           } else {
-            actions.push_back(new Action(LEAD_PERSON, 
-                                         lead_robot_id, 
-                                         next_node, 
-                                         request_id, 
-                                         state.robots[lead_robot_id].help_destination)); 
+          actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
+                                                        lead_robot_id, 
+                                                        next_node, 
+                                                        request_id, 
+                                                        state.robots[lead_robot_id].help_destination))); 
           }
         } else {
           // See if you need to wait here for the exchange robot.
           if (!isRobotExactlyAt(state.robots[exchange_robot_id], request.loc_node)) {
-            actions.push_back(new Action(LEAD_PERSON,
-                                         lead_robot_id,
-                                         request.loc_node,
-                                         request_id,
-                                         state.robots[lead_robot_id].help_destination));
+          actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
+                                                        lead_robot_id,
+                                                        request.loc_node,
+                                                        request_id,
+                                                        state.robots[lead_robot_id].help_destination)));
           } else {
-            actions.push_back(new Action(RELEASE_ROBOT, 
-                                         lead_robot_id, 
-                                         NONE, 
-                                         NONE, 
-                                         state.robots[lead_robot_id].help_destination)); 
+          actions.push_back(Action::ConstPtr(new Action(RELEASE_ROBOT, 
+                                                        lead_robot_id, 
+                                                        NONE, 
+                                                        NONE, 
+                                                        state.robots[lead_robot_id].help_destination))); 
             // Continue leading the robot.
             int next_node = 
               shortest_paths_[state.requests[request_id].loc_node][state.requests[request_id].goal][0];
-            actions.push_back(new Action(LEAD_PERSON, 
-                                         exchange_robot_id, 
-                                         next_node, 
-                                         request_id, 
-                                         state.robots[exchange_robot_id].help_destination)); 
+              actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
+                                                            exchange_robot_id, 
+                                                            next_node, 
+                                                            request_id, 
+                                                            state.robots[exchange_robot_id].help_destination))); 
           }
         }
       } else {
         // Continue leading the robot.
         int next_node = 
           shortest_paths_[state.requests[request_id].loc_node][state.requests[request_id].goal][0];
-        actions.push_back(new Action(LEAD_PERSON, 
-                                     lead_robot_id, 
-                                     next_node, 
-                                     request_id, 
-                                     state.robots[lead_robot_id].help_destination)); 
+          actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON, 
+                                                        lead_robot_id, 
+                                                        next_node, 
+                                                        request_id, 
+                                                        state.robots[lead_robot_id].help_destination))); 
       }
     }
 
