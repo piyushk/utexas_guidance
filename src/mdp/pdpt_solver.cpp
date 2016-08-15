@@ -212,6 +212,7 @@ namespace utexas_guidance {
           // Figure out if there is a direct intersection.
           if (request.loc_node == robot_future_location[future_location_id].loc) {
             intersection = robot_future_location[future_location_id];
+            break;
           }
 
           location_prior_to_intersection = request.loc_node;
@@ -219,39 +220,65 @@ namespace utexas_guidance {
                path_counter_id < shortest_paths_[request.loc_node][request.goal]; 
                ++path_counter_id) {
             if (shortest_paths_[request.loc_node][request.goal][path_counter_id] == 
-            location_prior_to_intersection = 
-              shortest_paths_[request.loc_node][request.goal].end()) {
-            intersection = robot_future_location[future_location_id];
-            break;
+                robot_future_location[future_location_id].loc) {
+              intersection = robot_future_location[future_location_id];
+              break;
+            }
+            location_prior_to_intersection = shortest_paths_[request.loc_node][request.goal][path_counter_id];
           }
-
         }
+
+        bool use_elevator_hack = true;
+        use_elevator_hack = use_elevator_hack && 
+                            location_prior_to_intersection != NONE &&
+                            !onSameFloor(location_prior_to_intersection,
+                                         intersection.loc,
+                                         graph_);
 
         float relative_reward = 0.0f;
         if (intersection.loc != -1) {
           // First calculate the reward loss due to wait at the intersection point.
-          float lead_time_to_intersection = robot_speed * shortest_distances_[request_.loc_node][intersection_id];
-          if (lead_time_to_intersection > robot_time_to_intersection) {
-            // TODO: This is buggy, since the robot can do work during this time. You need the to know if they're gonna
-            // wait at each location they visit as well.
+          float lead_time_to_previous_intersection = 0.0f;
+          if (use_elevator_hack &&
+              request_.loc_node != location_prior_to_intersection) {
+            lead_time_to_previous_intersection = 
+              robot_speed * shortest_distances_[request_.loc_node][location_prior_to_intersection];
+          }
+
+          float lead_time_to_intersection = 0.0f;
+          if (request_.loc_node != intersection.loc) {
+            if (use_elevator_hack) {
+              lead_time_to_intersection = lead_time_to_previous_intersection + 
+                human_speed * shortest_distances_[location_prior_to_intersection][intersection.loc];
+            } else {
+              lead_time_to_intersection = robot_speed * shortest_distances_[request_.loc_node][intersection.loc];
+            }
+          }
+
+          // First compute reward due to waiting.
+          if (lead_time_to_intersection > intersection.time_leave) {
             // TODO: This assumes the task utility is same across all background tasks. You need to store the task
             // utility per task as well. Overall it's starting to look like you need a better data structure than pair.
-            reward -= state.robots[robot_id].tau_u * (lead_time_to_intersection - robot_time_to_intersection);
+            reward -= state.robots[robot_id].tau_u * (lead_time_to_intersection - intersection.time_arrive);
+            // This means that we cannot allow the robot to work there at all, as it'll leave as soon as it finishes.
+          } else if (lead_time_to_intersection < intersection.time_arrive) {
+            // TODO: This assumes the task utility is same across all background tasks. You need to store the task
+            // utility per task as well. Overall it's starting to look like you need a better data structure than pair.
+            reward -= (1.0f + state.robots[lead_robot_id].tau_u) * (intersection.time_arrive - lead_time_to_intersection);
           } else {
-            // TODO: This assumes the task utility is same across all background tasks. You need to store the task
-            // utility per task as well. Overall it's starting to look like you need a better data structure than pair.
-            reward -= (1.0f + state.robots[lead_robot_id].tau_u) * (lead_time_to_intersection - robot_time_to_intersection);
+            // The robot's doing work at a location when the person arrives. There's no penalty.
+            reward -= 0.0f;
           }
 
           // Next, calculate the reward loss by assigning the new robot. You need the destination of the robot at the
           // time of intersection. 
           // TODO: This is buggy. You don't have that destination yet.
           float time_to_service_destination_before_action =
-            robot_speed * shortest_distances_[intersection_id][destination_at_time_of_intersection];
+            robot_speed * shortest_distances_[intersection.loc][intersection.tau_u];
           float time_to_service_destination_after_action =
-            robot_speed * shortest_distances_[request->goal][destination_at_time_of_intersection];
+            robot_speed * shortest_distances_[request->goal][intersection.tau_u];
           float leading_time = 
-            robot_speed * shortest_distances_[intersection_id][request->goal];
+            robot_speed * shortest_distances_[intersection.loc][request->goal];
           float extra_time_to_service_destination = 
             leading_time + time_to_service_destination_after_action - time_to_service_destination_before_action;
           reward -= state.robots[robot_id].tau_u * extra_time_to_service_destination;
@@ -260,9 +287,9 @@ namespace utexas_guidance {
           float time_to_service_destination_before_action =
             robot_speed * shortest_distances_[request->goal][state.robots[lead_robot_id].tau_d];
           float time_to_service_destination_after_action =
-            robot_speed * shortest_distances_[intersection_id][state.robots[lead_robot_id].tau_d];
+            robot_speed * shortest_distances_[intersection.loc][state.robots[lead_robot_id].tau_d];
           float time_not_spent_leading = 
-            robot_speed * shortest_distances_[intersection_id][request->goal];
+            robot_speed * shortest_distances_[intersection.loc][request->goal];
           float time_saved = 
             time_not_spent_leading + time_to_service_destination_before_action - time_to_service_destination_before_action;
           reward += state.robots[lead_robot_id].tau_u * extra_time_to_service_destination;
@@ -270,7 +297,7 @@ namespace utexas_guidance {
           if (reward > max_relative_reward) {
             max_relative_reward = reward;
             exchange_id = robot_id;
-            max_intersection_id = intersection_id;
+            max_intersection.loc = intersection.loc;
             // TODO: this is buggy, should use end time at the location, similar to reward.
             if (robot_time_to_intersection < 
           }
