@@ -368,7 +368,7 @@ namespace utexas_guidance {
         /* std::cout << robot.graph_id << " " << robot.precision << " " << destination << " " << robot.other_graph_node << std::endl; */
         // Check if the robot has already reached it's destination.
         if (isRobotExactlyAt(robot, destination)) {
-          if (robot_in_use) {
+          if (robot_in_use && destination != robot.tau_d) {
             // Won't be doing anything more with this robot until the robot gets released.
             robot_time_remaining = 0.0f;
           } else {
@@ -378,11 +378,13 @@ namespace utexas_guidance {
             robot_time_remaining = 0.0f;
 
             // Check if the robot can complete this task and move on to the next task.
-            if (robot.tau_t > robot.tau_total_task_time) {
+            if (robot.tau_t >= robot.tau_total_task_time) {
               robot_time_remaining = robot.tau_t - robot.tau_total_task_time;
               task_generation_model->generateNewTaskForRobot(robot_id, robot, rng);
               // Update the destination for this robot.
-              destination = robot.tau_d;
+              if (!robot_in_use) {
+                destination = robot.tau_d;
+              }
             }
           }
         } else {

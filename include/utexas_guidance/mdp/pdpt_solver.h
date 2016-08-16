@@ -40,6 +40,10 @@ namespace utexas_guidance {
       virtual std::string getName() const;
 
     private:
+      
+      float getRewardFromTrajectory(const State& state, 
+                                    const std::vector<Action::ConstPtr> &actions,
+                                    std::vector<Action::ConstPtr> &actions_till_first_wait) const;
 
       boost::shared_ptr<RNG> rng_;
 

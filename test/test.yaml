@@ -1,6 +1,6 @@
 models:
   - name: utexas_guidance::GuidanceModel
-    initial_num_requests: 2
+    initial_num_requests: 1
     graph_file: /home/piyushk/utexas_planning/utexas_guidance/graphs/test.yaml
     task_model_file: /home/piyushk/utexas_planning/utexas_guidance/test/fixed_tasks.yaml
     task_utility: 0.5

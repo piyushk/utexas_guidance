@@ -154,16 +154,30 @@ namespace utexas_guidance {
       for(unsigned int i = 0; i < next_state->robots.size(); ++i) {
         const RobotState& orig_robot = state->robots[i];
         const RobotState& robot = next_state->robots[i];
-        if (robot.help_destination != NONE) {
-          float distance_to_service_destination_before_action =
-            getTrueDistanceTo(orig_robot.loc_u, orig_robot.loc_v, orig_robot.loc_p, orig_robot.tau_d, shortest_distances_);
-          float distance_to_service_destination =
+        if (orig_robot.help_destination != NONE) {
+          float distance_to_current_service_destination_before_action =
+            getTrueDistanceTo(orig_robot.loc_u, orig_robot.loc_v, orig_robot.loc_p, robot.tau_d, shortest_distances_);
+          /* std::cout << "d1: " << distance_to_current_service_destination_before_action << std::endl; */
+          float distance_to_current_service_destination =
             getTrueDistanceTo(robot.loc_u, robot.loc_v, robot.loc_p, robot.tau_d, shortest_distances_);
-          float extra_distance_to_service_destination =
-            distance_to_service_destination - distance_to_service_destination_before_action;
-          float extra_time_to_service_destination =
-            extra_distance_to_service_destination / motion_model_->getRobotSpeed();
-          float utility_loss_per_robot = (extra_time_to_service_destination + post_action_timeout) * robot.tau_u;
+          /* std::cout << "d2: " << distance_to_current_service_destination << std::endl; */
+          float extra_distance_to_current_service_destination =
+            distance_to_current_service_destination - distance_to_current_service_destination_before_action;
+          float extra_time_to_current_service_destination =
+            extra_distance_to_current_service_destination / motion_model_->getRobotSpeed();
+          /* std::cout << "t1: " << extra_time_to_current_service_destination << std::endl; */
+          float task_time_saved = 0.0f;
+          // We could have at most moved forward one task.
+          if (robot.tau_d != orig_robot.tau_d) {
+            task_time_saved = (orig_robot.tau_total_task_time - orig_robot.tau_t + robot.tau_t);
+          } else {
+            task_time_saved = robot.tau_t - orig_robot.tau_t;
+          }
+          /* std::cout << "t2: " << -task_time_saved << std::endl; */
+          /* std::cout << "t3: " << post_action_timeout << std::endl; */
+          float utility_loss_per_robot = 
+            (extra_time_to_current_service_destination + post_action_timeout - task_time_saved) * robot.tau_u;
+          /* std::cout << "ul: " << utility_loss_per_robot << std::endl; */
           utility_loss += utility_loss_per_robot;
         }
       }

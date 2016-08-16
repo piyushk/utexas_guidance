@@ -58,11 +58,19 @@ namespace utexas_guidance {
         throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
       }
       if (action->type == LEAD_PERSON) {
-        int next_node = 
-          shortest_paths_[state->requests[action->request_id].loc_node][state->requests[action->request_id].goal][0];
-        if (action->node == next_node) {
-          return actions[i];
-        }
+        // // TODO parametrize this part.
+        // if (state->requests[action->request_id].loc_node ==
+        //     state->robots[action->robot_id].tau_d) {
+        //   if (action->node == state->requests[action->request_id].loc_node) {
+        //     return actions[i];
+        //   }
+        // } else {
+          int next_node = 
+            shortest_paths_[state->requests[action->request_id].loc_node][state->requests[action->request_id].goal][0];
+          if (action->node == next_node) {
+            return actions[i];
+          }
+        /* } */
       }
     }
 
