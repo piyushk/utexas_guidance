@@ -158,12 +158,12 @@ namespace utexas_guidance {
           current_loc = next_loc;
         }
 
-        // std::cout << "For robot id " << robot_id << ", " << robot.help_destination << ":-" << std::endl;
-        // for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
-        //   std::cout << "  " << robot_future_location[future_location_id].loc << "@" << 
-        //     robot_future_location[future_location_id].time_arrive << "-" <<
-        //     robot_future_location[future_location_id].time_leave << std::endl;
-        // }
+        std::cout << "For robot id " << robot_id << ", " << robot.help_destination << ":-" << std::endl;
+        for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
+          std::cout << "  " << robot_future_location[future_location_id].loc << "@" << 
+            robot_future_location[future_location_id].time_arrive << "-" <<
+            robot_future_location[future_location_id].time_leave << std::endl;
+        }
       }
     }
 
@@ -218,6 +218,8 @@ namespace utexas_guidance {
           continue;
         }
 
+        /* std::cout << "finding intersection with robot " << robot_id << std::endl; */
+
         // See if the current path of this robot is going to intersect with the request we're interested in.
         std::vector<RobotFutureLocation>& robot_future_location = robot_future_locations[robot_id];
 
@@ -228,7 +230,9 @@ namespace utexas_guidance {
         RobotFutureLocation intersection;
         intersection.loc = -1;
         int location_prior_to_intersection = -1;
-        for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
+        for (int future_location_id = 0; 
+             future_location_id < robot_future_location.size() && intersection.loc == -1; 
+             ++future_location_id) {
 
           // Figure out if there is a direct intersection.
           if (request.loc_node == robot_future_location[future_location_id].loc) {
@@ -249,29 +253,27 @@ namespace utexas_guidance {
           }
         }
 
-        if (intersection.loc = -1) {
-          continue;
-        }
-
-        bool use_elevator_hack = true;
-        use_elevator_hack = use_elevator_hack && 
-          location_prior_to_intersection != NONE &&
-          !onSameFloor(location_prior_to_intersection,
-                       intersection.loc,
-                       graph_);
-
-        float lead_time_to_previous_intersection = 0.0f;
-        if (use_elevator_hack) {
-          lead_time_to_previous_intersection = 
-            robot_speed * shortest_distances_[request.loc_node][location_prior_to_intersection];
-        }
-
-        float direct_elev_lead_time_to_intersection = lead_time_to_previous_intersection + 
-          human_speed * shortest_distances_[location_prior_to_intersection][intersection.loc];
-        use_elevator_hack = use_elevator_hack &&
-          direct_elev_lead_time_to_intersection > intersection.time_arrive;
-
         if (intersection.loc != -1) {
+
+           /* Compute some statistics about the intersection. */
+          bool use_elevator_hack = true;
+          use_elevator_hack = use_elevator_hack && 
+            location_prior_to_intersection != NONE &&
+            !onSameFloor(location_prior_to_intersection,
+                         intersection.loc,
+                         graph_);
+
+          float lead_time_to_previous_intersection = 0.0f;
+          if (use_elevator_hack) {
+            lead_time_to_previous_intersection = 
+              robot_speed * shortest_distances_[request.loc_node][location_prior_to_intersection];
+          }
+
+          float direct_elev_lead_time_to_intersection = lead_time_to_previous_intersection + 
+            human_speed * shortest_distances_[location_prior_to_intersection][intersection.loc];
+          use_elevator_hack = use_elevator_hack &&
+            direct_elev_lead_time_to_intersection > intersection.time_arrive;
+
 
           /* Compute the actions necessary for this transfer to take place, just for this request. */
           float time = 0.0f;
@@ -324,9 +326,22 @@ namespace utexas_guidance {
                                                           next_loc,
                                                           0)));
           }
+
+          /* std::cout << "  computed action policy: " << std::endl; */
           
+          // BOOST_FOREACH(const Action::ConstPtr& action, actions) {
+          //   std::cout << "    ";
+          //   action->serialize(std::cout);
+          //   std::cout << std::endl; 
+          // }
+          
+          /* std::cout << "  computing reward for robot " << robot_id << std::endl; */
+
           std::vector<Action::ConstPtr> actions_till_first_wait_temp;
           float reward = getRewardFromTrajectory(start_state, actions, actions_till_first_wait_temp);
+
+          std::cout << "  reward if exchanged with robot " << robot_id << " is " << reward << std::endl;
+
           if (reward > max_reward) {
             std::cout << "exchanging robots. " << std::endl;
             max_reward = reward;
@@ -344,14 +359,16 @@ namespace utexas_guidance {
 
     }
 
-    std::cout << "Planning on taking actions: " << std::endl;
-    BOOST_FOREACH(const Action::ConstPtr& action, all_actions) {
-      std::cout << "  ";
-      action->serialize(std::cout);
-      std::cout << std::endl;
-    }
-    throw std::runtime_error("blah!");
+    // std::cout << "Planning on taking actions: " << std::endl;
+    // BOOST_FOREACH(const Action::ConstPtr& action, all_actions) {
+    //   std::cout << "  ";
+    //   action->serialize(std::cout);
+    //   std::cout << std::endl;
+    // }
+    // throw std::runtime_error("blah!");
 
+    std::vector<Action::ConstPtr> actions_at_current_state;
+    
     return Action::ConstPtr(new Action(WAIT));
   }
 
@@ -381,18 +398,26 @@ namespace utexas_guidance {
     float reward = 0.0f;
     bool first_wait_executed = false, final_wait_executed = false;
     actions_till_first_wait.clear();
-    while(action_counter < actions.size() && !final_wait_executed) {
+    while(action_counter < actions.size() || !final_wait_executed) {
       std::vector<utexas_planning::Action::ConstPtr> actions_at_state;
       model_->getActionsAtState(state_ptr, actions_at_state);
       Action::ConstPtr action(new Action(WAIT));
       if (action_counter < actions.size()) {
+        // std::cout << "hunting from action ";
+        // actions[action_counter]->serialize(std::cout);
+        // std::cout << " in:- " << std::endl; 
         bool action_found = false;
         for (int a = 0; a < actions_at_state.size(); ++a) {
+          // std::cout << "  ";
+          // actions_at_state[a]->serialize(std::cout);
+          // std::cout << std::endl;
           Action::ConstPtr action_d = boost::dynamic_pointer_cast<const Action>(actions_at_state[a]);
+          Action::Ptr action_mutable(new Action(*action_d));
+          action_mutable->old_help_destination = NONE;
           if (!action_d) {
             throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
           }
-          if (*action_d == *actions[action_counter]) {
+          if (*action_mutable == *actions[action_counter]) {
             action = action_d;
             action_found = true;
             break;
@@ -412,8 +437,10 @@ namespace utexas_guidance {
         actions_till_first_wait.push_back(action);
       }
 
-      action->serialize(std::cout);
-      std::cout << std::endl;
+      // action->serialize(std::cout);
+      // std::cout << std::endl;
+
+      // throw std::runtime_error("blah!");
 
       int unused_depth_count;
       float step_reward, unused_post_action_timeout;
