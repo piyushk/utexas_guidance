@@ -1,3 +1,4 @@
+#include <boost/foreach.hpp>
 #include <class_loader/class_loader.h>
 
 #include <utexas_guidance/mdp/guidance_model.h>
@@ -97,11 +98,11 @@ namespace utexas_guidance {
     std::vector<std::vector<RobotFutureLocation> > robot_future_locations(state.robots.size());
     for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
       const RobotState& robot = state.robots[robot_id];
-      if (!robot.is_leading_person) {
+      if (robot.is_leading_person) {
         robot_available[robot_id] = false;
       }
       
-      if (!robot_available[robot_id]) {
+      if (robot_available[robot_id]) {
 
         std::vector<RobotFutureLocation>& robot_future_location = robot_future_locations[robot_id];
 
@@ -138,7 +139,7 @@ namespace utexas_guidance {
           future_loc.tau_d = current_task.tau_d;
           future_loc.tau_u = current_task.tau_u;
           if (current_loc == current_destination) {
-            if (robot.help_destination != NONE) {
+            if (robot.help_destination == NONE) {
               total_robot_time += current_task.tau_total_task_time;
               future_loc.time_leave = total_robot_time;
               RNG unused_rng(0);
@@ -157,7 +158,7 @@ namespace utexas_guidance {
           current_loc = next_loc;
         }
 
-        // std::cout << "For robot id " << robot_id << ":-" << std::endl;
+        // std::cout << "For robot id " << robot_id << ", " << robot.help_destination << ":-" << std::endl;
         // for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
         //   std::cout << "  " << robot_future_location[future_location_id].loc << "@" << 
         //     robot_future_location[future_location_id].time_arrive << "-" <<
@@ -204,8 +205,12 @@ namespace utexas_guidance {
                                                       lead_robot_id,
                                                       next_loc,
                                                       0)));
+        // (actions.back())->serialize(std::cout);
+        // std::cout << std::endl;
       }
       max_reward = getRewardFromTrajectory(start_state, actions, actions_till_first_wait);
+
+      std::cout << "lead reward for request " << request_id << " is " << max_reward << std::endl;
 
       for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
 
@@ -339,6 +344,12 @@ namespace utexas_guidance {
 
     }
 
+    std::cout << "Planning on taking actions: " << std::endl;
+    BOOST_FOREACH(const Action::ConstPtr& action, all_actions) {
+      std::cout << "  ";
+      action->serialize(std::cout);
+      std::cout << std::endl;
+    }
     throw std::runtime_error("blah!");
 
     return Action::ConstPtr(new Action(WAIT));
@@ -370,14 +381,24 @@ namespace utexas_guidance {
     float reward = 0.0f;
     bool first_wait_executed = false, final_wait_executed = false;
     actions_till_first_wait.clear();
-    while(action_counter < actions.size() && final_wait_executed) {
+    while(action_counter < actions.size() && !final_wait_executed) {
       std::vector<utexas_planning::Action::ConstPtr> actions_at_state;
       model_->getActionsAtState(state_ptr, actions_at_state);
       Action::ConstPtr action(new Action(WAIT));
       if (action_counter < actions.size()) {
-        if (std::find(actions_at_state.begin(), actions_at_state.end(), actions[action_counter]) != 
-            actions_at_state.end()) {
-          action = actions[action_counter];
+        bool action_found = false;
+        for (int a = 0; a < actions_at_state.size(); ++a) {
+          Action::ConstPtr action_d = boost::dynamic_pointer_cast<const Action>(actions_at_state[a]);
+          if (!action_d) {
+            throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
+          }
+          if (*action_d == *actions[action_counter]) {
+            action = action_d;
+            action_found = true;
+            break;
+          }
+        }
+        if (action_found) {
           ++action_counter;
         } else {
           first_wait_executed = true;
@@ -390,6 +411,9 @@ namespace utexas_guidance {
       if (!first_wait_executed) {
         actions_till_first_wait.push_back(action);
       }
+
+      action->serialize(std::cout);
+      std::cout << std::endl;
 
       int unused_depth_count;
       float step_reward, unused_post_action_timeout;
