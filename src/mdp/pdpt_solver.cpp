@@ -158,12 +158,12 @@ namespace utexas_guidance {
           current_loc = next_loc;
         }
 
-        std::cout << "For robot id " << robot_id << ", " << robot.help_destination << ":-" << std::endl;
-        for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
-          std::cout << "  " << robot_future_location[future_location_id].loc << "@" << 
-            robot_future_location[future_location_id].time_arrive << "-" <<
-            robot_future_location[future_location_id].time_leave << std::endl;
-        }
+        // std::cout << "For robot id " << robot_id << ", " << robot.help_destination << ":-" << std::endl;
+        // for (int future_location_id = 0; future_location_id < robot_future_location.size(); ++future_location_id) {
+        //   std::cout << "  " << robot_future_location[future_location_id].loc << "@" << 
+        //     robot_future_location[future_location_id].time_arrive << "-" <<
+        //     robot_future_location[future_location_id].time_leave << std::endl;
+        // }
       }
     }
 
@@ -210,7 +210,7 @@ namespace utexas_guidance {
       }
       max_reward = getRewardFromTrajectory(start_state, actions, actions_till_first_wait);
 
-      std::cout << "lead reward for request " << request_id << " is " << max_reward << std::endl;
+      /* std::cout << "lead reward for request " << request_id << " is " << max_reward << std::endl; */
 
       for (unsigned int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
 
@@ -242,7 +242,7 @@ namespace utexas_guidance {
 
           location_prior_to_intersection = request.loc_node;
           for (int path_counter_id = 0; 
-               path_counter_id < shortest_paths_[request.loc_node][request.goal].size(); 
+               path_counter_id < shortest_paths_[request.loc_node][request.goal].size() - 1; // -1 since the goal cannot be the intersection point.
                ++path_counter_id) {
             if (shortest_paths_[request.loc_node][request.goal][path_counter_id] == 
                 robot_future_location[future_location_id].loc) {
@@ -289,29 +289,37 @@ namespace utexas_guidance {
                                                             lead_robot_id,
                                                             next_loc,
                                                             0)));
-              time += human_speed * shortest_distances_[current_loc][next_loc];
+              time += shortest_distances_[current_loc][next_loc] / human_speed;
             } else {
               actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
                                                             lead_robot_id,
                                                             next_loc,
                                                             0)));
-              time += robot_speed * shortest_distances_[current_loc][next_loc];
+              time += shortest_distances_[current_loc][next_loc] / robot_speed;
+              /* std::cout << time << " " << intersection.time_arrive << std::endl; */
             }
             if (!robot_assigned && (time >= intersection.time_leave)) {
               actions.push_back(Action::ConstPtr(new Action(ASSIGN_ROBOT,
                                                             robot_id,
-                                                            next_loc)));
+                                                            intersection.loc)));
               robot_assigned = true;
             }
             current_loc = shortest_paths_[request.loc_node][intersection.loc][path_idx];
           }
 
           while (time < intersection.time_arrive) {
+            /* std::cout << time << " " << intersection.time_arrive << std::endl; */
             actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
                                                           lead_robot_id,
                                                           intersection.loc,
                                                           0)));
             time += 10.0f;
+            if (!robot_assigned && (time >= intersection.time_leave)) {
+              actions.push_back(Action::ConstPtr(new Action(ASSIGN_ROBOT,
+                                                            robot_id,
+                                                            intersection.loc)));
+              robot_assigned = true;
+            }
           }
 
           if (!use_elevator_hack) {
@@ -340,10 +348,10 @@ namespace utexas_guidance {
           std::vector<Action::ConstPtr> actions_till_first_wait_temp;
           float reward = getRewardFromTrajectory(start_state, actions, actions_till_first_wait_temp);
 
-          std::cout << "  reward if exchanged with robot " << robot_id << " is " << reward << std::endl;
+          /* std::cout << "  reward if exchanged with robot " << robot_id << " is " << reward << std::endl; */
 
           if (reward > max_reward) {
-            std::cout << "exchanging robots. " << std::endl;
+            /* std::cout << "exchanging robots. " << std::endl; */
             max_reward = reward;
             exchange_robot_id = robot_id;
             actions_till_first_wait = actions_till_first_wait_temp;
@@ -365,9 +373,23 @@ namespace utexas_guidance {
     //   action->serialize(std::cout);
     //   std::cout << std::endl;
     // }
-    // throw std::runtime_error("blah!");
+    /* throw std::runtime_error("blah!"); */
 
-    std::vector<Action::ConstPtr> actions_at_current_state;
+    std::vector<utexas_planning::Action::ConstPtr> actions_at_current_state;
+    model_->getActionsAtState(current_state, actions_at_current_state);
+    for (int a = 0; a < actions_at_current_state.size(); ++a) {
+      Action::ConstPtr action_d = boost::dynamic_pointer_cast<const Action>(actions_at_current_state[a]);
+      for (int e = 0; e < all_actions.size(); ++e) {
+        if (all_actions[e]->type == action_d->type &&
+            all_actions[e]->robot_id == action_d->robot_id &&
+            all_actions[e]->node == action_d->node &&
+            all_actions[e]->request_id == action_d->request_id) {
+          return action_d;
+        }
+      }
+    }
+
+    /* If you've reached here, all possible actions have been executed. */
     
     return Action::ConstPtr(new Action(WAIT));
   }
@@ -437,6 +459,9 @@ namespace utexas_guidance {
         actions_till_first_wait.push_back(action);
       }
 
+      // state_ptr->serialize(std::cout);
+      // std::cout << std::endl;
+
       // action->serialize(std::cout);
       // std::cout << std::endl;
 
@@ -456,6 +481,8 @@ namespace utexas_guidance {
                          unused_rng);
       state_ptr = boost::dynamic_pointer_cast<const State>(next_state_ptr);
       reward += step_reward;
+
+      /* std::cout << "post action timeout: " << unused_post_action_timeout << std::endl; */
     }
 
     return reward;
