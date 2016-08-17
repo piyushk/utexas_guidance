@@ -66,7 +66,7 @@ namespace utexas_guidance {
     float human_speed = motion_model_->getHumanSpeed();
     float robot_speed = motion_model_->getRobotSpeed();
 
-    std::vector<Action::ConstPtr> all_actions;
+    std::vector<Action::Ptr> all_actions;
 
     std::vector<bool> robot_available(state.robots.size(), true);
     std::vector<int> lead_robot(state.requests.size(), NONE);
@@ -189,6 +189,8 @@ namespace utexas_guidance {
         continue;
       }
 
+      /* std::cout << "for request " << request_id << " lead robot is " << lead_robot[request_id] << std::endl; */
+
       float max_reward = 0.0f;
       int exchange_robot_id = NONE;
       int lead_robot_id = lead_robot[request_id];
@@ -197,11 +199,11 @@ namespace utexas_guidance {
       start_state.requests[0] = start_state.requests[request_id];
       start_state.requests.resize(1);
 
-      std::vector<Action::ConstPtr> actions, actions_till_first_wait;
+      std::vector<Action::Ptr> actions, actions_till_first_wait;
       /* Calculate the reward accrued by simply leading the robot to the goal. */
       for (int path_idx = 0; path_idx < shortest_paths_[request.loc_node][request.goal].size(); ++path_idx) {
         int next_loc = shortest_paths_[request.loc_node][request.goal][path_idx];
-        actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
+        actions.push_back(Action::Ptr(new Action(LEAD_PERSON,
                                                       lead_robot_id,
                                                       next_loc,
                                                       0)));
@@ -283,15 +285,15 @@ namespace utexas_guidance {
           for (int path_idx = 0; path_idx < shortest_paths_[request.loc_node][intersection.loc].size(); ++path_idx) {
             int next_loc = shortest_paths_[request.loc_node][intersection.loc][path_idx];
             if (use_elevator_hack && path_idx == shortest_paths_[request.loc_node][intersection.loc].size() - 1) {
-              actions.push_back(Action::ConstPtr(new Action(RELEASE_ROBOT,
+              actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT,
                                                             lead_robot_id)));
-              actions.push_back(Action::ConstPtr(new Action(DIRECT_PERSON,
+              actions.push_back(Action::Ptr(new Action(DIRECT_PERSON,
                                                             lead_robot_id,
                                                             next_loc,
                                                             0)));
               time += shortest_distances_[current_loc][next_loc] / human_speed;
             } else {
-              actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
+              actions.push_back(Action::Ptr(new Action(LEAD_PERSON,
                                                             lead_robot_id,
                                                             next_loc,
                                                             0)));
@@ -299,7 +301,7 @@ namespace utexas_guidance {
               /* std::cout << time << " " << intersection.time_arrive << std::endl; */
             }
             if (!robot_assigned && (time >= intersection.time_leave)) {
-              actions.push_back(Action::ConstPtr(new Action(ASSIGN_ROBOT,
+              actions.push_back(Action::Ptr(new Action(ASSIGN_ROBOT,
                                                             robot_id,
                                                             intersection.loc)));
               robot_assigned = true;
@@ -309,34 +311,29 @@ namespace utexas_guidance {
 
           while (time < intersection.time_arrive) {
             /* std::cout << time << " " << intersection.time_arrive << std::endl; */
-            actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
+            actions.push_back(Action::Ptr(new Action(LEAD_PERSON,
                                                           lead_robot_id,
                                                           intersection.loc,
                                                           0)));
             time += 10.0f;
             if (!robot_assigned && (time >= intersection.time_leave)) {
-              actions.push_back(Action::ConstPtr(new Action(ASSIGN_ROBOT,
+              actions.push_back(Action::Ptr(new Action(ASSIGN_ROBOT,
                                                             robot_id,
                                                             intersection.loc)));
               robot_assigned = true;
             }
           }
 
-          if (!use_elevator_hack) {
-            actions.push_back(Action::ConstPtr(new Action(RELEASE_ROBOT,
-                                                          lead_robot_id)));
-          }
-
           for (int path_idx = 0; path_idx < shortest_paths_[intersection.loc][request.goal].size(); ++path_idx) {
             int next_loc = shortest_paths_[intersection.loc][request.goal][path_idx];
-            actions.push_back(Action::ConstPtr(new Action(LEAD_PERSON,
-                                                          robot_id,
-                                                          next_loc,
-                                                          0)));
+            actions.push_back(Action::Ptr(new Action(LEAD_PERSON,
+                                                     robot_id,
+                                                     next_loc,
+                                                     0)));
           }
 
-          /* std::cout << "  computed action policy: " << std::endl; */
-          
+          // std::cout << "  computed action policy: " << std::endl;
+          // 
           // BOOST_FOREACH(const Action::ConstPtr& action, actions) {
           //   std::cout << "    ";
           //   action->serialize(std::cout);
@@ -345,7 +342,7 @@ namespace utexas_guidance {
           
           /* std::cout << "  computing reward for robot " << robot_id << std::endl; */
 
-          std::vector<Action::ConstPtr> actions_till_first_wait_temp;
+          std::vector<Action::Ptr> actions_till_first_wait_temp;
           float reward = getRewardFromTrajectory(start_state, actions, actions_till_first_wait_temp);
 
           /* std::cout << "  reward if exchanged with robot " << robot_id << " is " << reward << std::endl; */
@@ -360,7 +357,14 @@ namespace utexas_guidance {
         }
       }
 
+      // Update request id to the correct one.
+      for (int e = 0; e < actions_till_first_wait.size(); ++e) {
+        actions_till_first_wait[e]->request_id = request_id;
+      }
+
       all_actions.insert(all_actions.end(), actions_till_first_wait.begin(), actions_till_first_wait.end());
+
+      // If a robot got exchanged, mark the exchanged robot as busy.
       if (exchange_robot_id != NONE) {
         robot_available[exchange_robot_id] = false;
       }
@@ -380,10 +384,8 @@ namespace utexas_guidance {
     for (int a = 0; a < actions_at_current_state.size(); ++a) {
       Action::ConstPtr action_d = boost::dynamic_pointer_cast<const Action>(actions_at_current_state[a]);
       for (int e = 0; e < all_actions.size(); ++e) {
-        if (all_actions[e]->type == action_d->type &&
-            all_actions[e]->robot_id == action_d->robot_id &&
-            all_actions[e]->node == action_d->node &&
-            all_actions[e]->request_id == action_d->request_id) {
+        all_actions[e]->old_help_destination = action_d->old_help_destination; // don't want to compare this.
+        if (*all_actions[e] == *action_d) {
           return action_d;
         }
       }
@@ -411,8 +413,8 @@ namespace utexas_guidance {
   }
 
   float PDPTSolver::getRewardFromTrajectory(const State& state, 
-                                            const std::vector<Action::ConstPtr> &actions,
-                                            std::vector<Action::ConstPtr> &actions_till_first_wait) const {
+                                            const std::vector<Action::Ptr> &actions,
+                                            std::vector<Action::Ptr> &actions_till_first_wait) const {
     State::ConstPtr state_ptr(new State(state));
     utexas_planning::State::ConstPtr next_state_ptr;
 
@@ -434,12 +436,11 @@ namespace utexas_guidance {
           // actions_at_state[a]->serialize(std::cout);
           // std::cout << std::endl;
           Action::ConstPtr action_d = boost::dynamic_pointer_cast<const Action>(actions_at_state[a]);
-          Action::Ptr action_mutable(new Action(*action_d));
-          action_mutable->old_help_destination = NONE;
           if (!action_d) {
             throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
           }
-          if (*action_mutable == *actions[action_counter]) {
+          actions[action_counter]->old_help_destination = action_d->old_help_destination; // Don't want to compare this.
+          if (*action_d == *actions[action_counter]) {
             action = action_d;
             action_found = true;
             break;
@@ -456,7 +457,7 @@ namespace utexas_guidance {
       }
 
       if (!first_wait_executed) {
-        actions_till_first_wait.push_back(action);
+        actions_till_first_wait.push_back(actions[action_counter - 1]);
       }
 
       // state_ptr->serialize(std::cout);

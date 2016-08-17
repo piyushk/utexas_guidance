@@ -23,7 +23,11 @@ namespace utexas_guidance {
   }
 
   void StateViewer::updateState(const utexas_planning::State::ConstPtr& state_base, float timeout) {
+    /* std::cout << "update state called" << std::endl; */
     boost::mutex::scoped_lock lock(mutex_);
+    // std::cout << "  state update state with ";
+    // state_base->serialize(std::cout);
+    // std::cout << std::endl;
     State::ConstPtr state = boost::dynamic_pointer_cast<const State>(state_base);
     if (!state) {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
@@ -33,6 +37,7 @@ namespace utexas_guidance {
     }
     if (timeout == 0.0f) {
       current_state_ = state;
+      next_state_.reset();
     } else {
       next_state_ = state;
     }
@@ -131,7 +136,7 @@ namespace utexas_guidance {
         color_g = 0.0f;
         color_b = 0.0f;
       }
-      // NOTE this is far form perfect, as we're losing information about waiting times. However, it'll be something.
+
       if (ratio != 0.0f) {
         State interpolated_state(*state);
         float unused_total_time;

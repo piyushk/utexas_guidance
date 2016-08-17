@@ -42,8 +42,8 @@ namespace utexas_guidance {
     private:
       
       float getRewardFromTrajectory(const State& state, 
-                                    const std::vector<Action::ConstPtr> &actions,
-                                    std::vector<Action::ConstPtr> &actions_till_first_wait) const;
+                                    const std::vector<Action::Ptr> &actions,
+                                    std::vector<Action::Ptr> &actions_till_first_wait) const;
 
       boost::shared_ptr<RNG> rng_;
 

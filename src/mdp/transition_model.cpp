@@ -333,7 +333,7 @@ namespace utexas_guidance {
       // Atleast one of the following should be 1, but no real need to check that.
       if (rs.loc_p > 1.0f - 1e-6f) {
         rs.loc_p = 1.0f;
-        if (rs.assist_type == LEAD_PERSON && requestComplete(rs)) {
+        if (rs.assist_type == LEAD_PERSON) {// && requestComplete(rs)) {
           // Find robot that helped this person.
           for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
             RobotState& robot = state.robots[robot_id];
