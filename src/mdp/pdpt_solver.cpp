@@ -285,8 +285,10 @@ namespace utexas_guidance {
           for (int path_idx = 0; path_idx < shortest_paths_[request.loc_node][intersection.loc].size(); ++path_idx) {
             int next_loc = shortest_paths_[request.loc_node][intersection.loc][path_idx];
             if (use_elevator_hack && path_idx == shortest_paths_[request.loc_node][intersection.loc].size() - 1) {
-              actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT,
-                                                            lead_robot_id)));
+              // if (state.robots[lead_robot_id].help_destination != NONE) {
+              //   actions.push_back(Action::Ptr(new Action(RELEASE_ROBOT,
+              //                                            lead_robot_id)));
+              // }
               actions.push_back(Action::Ptr(new Action(DIRECT_PERSON,
                                                             lead_robot_id,
                                                             next_loc,
@@ -359,7 +361,10 @@ namespace utexas_guidance {
 
       // Update request id to the correct one.
       for (int e = 0; e < actions_till_first_wait.size(); ++e) {
-        actions_till_first_wait[e]->request_id = request_id;
+        if (actions_till_first_wait[e]->type != ASSIGN_ROBOT &&
+            actions_till_first_wait[e]->type != RELEASE_ROBOT) {
+          actions_till_first_wait[e]->request_id = request_id;
+        }
       }
 
       all_actions.insert(all_actions.end(), actions_till_first_wait.begin(), actions_till_first_wait.end());
@@ -382,6 +387,9 @@ namespace utexas_guidance {
     std::vector<utexas_planning::Action::ConstPtr> actions_at_current_state;
     model_->getActionsAtState(current_state, actions_at_current_state);
     for (int a = 0; a < actions_at_current_state.size(); ++a) {
+      // std::cout << "  ";
+      // actions_at_current_state[a]->serialize(std::cout);
+      // std::cout << std::endl;
       Action::ConstPtr action_d = boost::dynamic_pointer_cast<const Action>(actions_at_current_state[a]);
       for (int e = 0; e < all_actions.size(); ++e) {
         all_actions[e]->old_help_destination = action_d->old_help_destination; // don't want to compare this.

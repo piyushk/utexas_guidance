@@ -75,6 +75,7 @@ namespace utexas_guidance {
       if (type != RELEASE_ROBOT) {
         stream << "->" << node;
       }
+      // stream << "," << request_id << "," << old_help_destination;
     }
     stream << "]";
   }

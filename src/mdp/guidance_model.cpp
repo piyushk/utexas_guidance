@@ -474,14 +474,14 @@ namespace utexas_guidance {
       state->requests[i].assist_loc = NONE;
     }
 
-    for (unsigned int i = 0; i < state->requests.size(); ++i) {
-      for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
-        if ((state->robots[robot_idx].help_destination == NONE) &&
-            (state->robots[robot_idx].loc_u == state->requests[i].loc_node)) {
-          state->robots[robot_idx].help_destination = state->robots[robot_idx].loc_u;
-        }
-      }
-    }
+    // for (unsigned int i = 0; i < state->requests.size(); ++i) {
+    //   for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
+    //     if ((state->robots[robot_idx].help_destination == NONE) &&
+    //         (state->robots[robot_idx].loc_u == state->requests[i].loc_node)) {
+    //       state->robots[robot_idx].help_destination = state->robots[robot_idx].loc_u;
+    //     }
+    //   }
+    // }
 
     return state;
   }
