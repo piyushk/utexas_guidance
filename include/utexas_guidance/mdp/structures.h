@@ -145,6 +145,18 @@ namespace utexas_guidance {
 
   };
 
+  /* Reward Metrics - Things apart from reward that we care about. */
+  class RewardMetrics : public utexas_planning::RewardMetrics {
+    public:
+      typedef boost::shared_ptr<RewardMetrics> Ptr;
+      typedef boost::shared_ptr<const RewardMetrics> ConstPtr;
+
+      float utility_loss;
+      float time_loss;
+
+      virtual std::map<std::string, std::string> asMap() const;
+  };
+
 } /* utexas_guidance*/
 
 #endif /* end of include guard: UTEXAS_GUIDANCE_STRUCTURES_H */

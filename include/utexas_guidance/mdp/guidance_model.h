@@ -83,8 +83,8 @@ namespace utexas_guidance {
       virtual MotionModel::ConstPtr getUnderlyingMotionModel() const;
       virtual TaskGenerationModel::ConstPtr getUnderlyingTaskModel() const;
 
-      // virtual std::map<std::string, std::string> getParamsAsMap() const;
-      // virtual utexas_planning::RewardMetrics::Ptr getRewardMetricsAtEpisodeStart() const;
+      virtual std::map<std::string, std::string> getParamsAsMap() const;
+      virtual utexas_planning::RewardMetrics::Ptr getRewardMetricsAtEpisodeStart() const;
 
     protected:
 

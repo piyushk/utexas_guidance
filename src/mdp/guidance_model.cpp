@@ -182,6 +182,16 @@ namespace utexas_guidance {
         }
       }
 
+
+      if (reward_metrics) {
+        boost::shared_ptr<RewardMetrics> reward_metrics_derived =
+          boost::dynamic_pointer_cast<RewardMetrics>(reward_metrics);
+        if (!reward_metrics_derived) {
+          throw DowncastException("utexas_planning::RewardMetrics", "utexas_guidance::RewardMetrics");
+        }
+        reward_metrics_derived
+      }
+
       reward = -(time_loss + utility_loss + unhelpful_robot_penalty);
       depth_count = lrint(post_action_timeout);
     }
@@ -509,6 +519,16 @@ namespace utexas_guidance {
     return task_generation_model_;
   }
 
+  std::map<std::string, std::string> getParamsAsMap() const {
+    return params_.asMap();
+  }
+
+  utexas_planning::RewardMetrics::Ptr GuidanceModel::getRewardMetricsAtEpisodeStart() const {
+    RewardMetrics::Ptr metric(new RewardMetrics);
+    metric->utility_loss = 0.0f;
+    metric->time_loss = 0.0f;
+    return metric;
+  }
 } /* utexas_guidance */
 
 CLASS_LOADER_REGISTER_CLASS(utexas_guidance::GuidanceModel, utexas_planning::GenerativeModel);

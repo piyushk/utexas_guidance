@@ -273,6 +273,17 @@ namespace utexas_guidance {
     return clone;
   }
 
+  /* Reward Metrics - Things apart from reward that we care about. */
+  std::map<std::string, std::string> RewardMetricsasMap() const {
+    std::map<std::string, std::string> metric_map;
+    metric_map["utility_loss"] = boost::lexical_cast<std::string>(utility_loss);
+    metric_map["time_loss"] = boost::lexical_cast<std::string>(time_loss);
+    metric_map["reward_normalized"] = boost::lexical_cast<std::string>(time_loss);
+    metric_map["utility_loss_normalized"] = boost::lexical_cast<std::string>(time_loss);
+    metric_map["time_loss_normalized"] = boost::lexical_cast<std::string>(time_loss);
+    return metric_map;
+  }
+
 } /* utexas_guidance */
 
 #undef COMPARE
