@@ -1,0 +1,17 @@
+<package format="2">
+  <name>utexas_guidance</name>
+  <version>1.2.4</version>
+  <description>
+    This package provides foo capability.
+  </description>
+  <maintainer email="piyushk@gmail.com">Piyush Khandelwal</maintainer>
+  <license>BSD</license>
+  <buildtool_depend>cmake</buildtool_depend>
+  <depend>boost</depend>
+  <depend>class_loader</depend>
+  <depend>qt4</depend>
+  <depend>utexas_planning</depend>
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
