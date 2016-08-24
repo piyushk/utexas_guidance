@@ -81,13 +81,13 @@ namespace utexas_guidance {
   void SingleRobotSolver::performPreActionProcessing(const utexas_planning::State::ConstPtr& state,
                                                      const utexas_planning::Action::ConstPtr& prev_action,
                                                      float timeout) {
-    boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f));
+    /* boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f)); */
   }
 
   void SingleRobotSolver::performPostActionProcessing(const utexas_planning::State::ConstPtr& state,
                                                       const utexas_planning::Action::ConstPtr& action,
                                                       float timeout) {
-    boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f));
+    /* boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f)); */
   }
 
   std::string SingleRobotSolver::getName() const {

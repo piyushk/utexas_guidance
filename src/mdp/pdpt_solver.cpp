@@ -407,13 +407,13 @@ namespace utexas_guidance {
   void PDPTSolver::performPreActionProcessing(const utexas_planning::State::ConstPtr& state,
                                               const utexas_planning::Action::ConstPtr& prev_action,
                                               float timeout) {
-    boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f));
+    /* boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f)); */
   }
 
   void PDPTSolver::performPostActionProcessing(const utexas_planning::State::ConstPtr& state,
                                                const utexas_planning::Action::ConstPtr& action,
                                                float timeout) {
-    boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f));
+    /* boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f)); */
   }
 
   std::string PDPTSolver::getName() const {
