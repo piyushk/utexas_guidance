@@ -8,7 +8,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/labeled_graph.hpp>
 
-#include <QGLViewer/qglviewer.h>
+/* #include <QGLViewer/qglviewer.h> */
 
 namespace utexas_guidance {
 

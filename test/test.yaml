@@ -9,9 +9,9 @@ models:
     h3_force_assistance: true
     h4_unhelpful_robot_penalty: 5.0
 planners:
+  - name: utexas_guidance::SingleRobotSolver
+  - name: utexas_guidance::PDPTSolver
   - name: utexas_planning::MCTS
-  # - name: utexas_guidance::SingleRobotSolver
-  # - name: utexas_guidance::PDPTSolver
     default_policy: utexas_guidance::SingleRobotSolver
     max_depth: 500
     uct_reward_bound: 500

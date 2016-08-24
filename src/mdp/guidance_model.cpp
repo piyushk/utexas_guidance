@@ -182,18 +182,22 @@ namespace utexas_guidance {
         }
       }
 
+      reward = -(time_loss + utility_loss + unhelpful_robot_penalty);
+      depth_count = lrint(post_action_timeout);
 
       if (reward_metrics) {
         boost::shared_ptr<RewardMetrics> reward_metrics_derived =
           boost::dynamic_pointer_cast<RewardMetrics>(reward_metrics);
         if (!reward_metrics_derived) {
-          throw DowncastException("utexas_planning::RewardMetrics", "utexas_guidance::RewardMetrics");
+          throw utexas_planning::DowncastException("utexas_planning::RewardMetrics", "utexas_guidance::RewardMetrics");
         }
-        reward_metrics_derived
+        reward_metrics_derived->utility_loss -= utility_loss;
+        reward_metrics_derived->time_loss -= time_loss;
+        reward_metrics_derived->reward_normalized += reward / params_.normalizer;
+        reward_metrics_derived->utility_loss_normalized -= utility_loss / params_.normalizer;
+        reward_metrics_derived->time_loss_normalized -= time_loss / params_.normalizer;
       }
 
-      reward = -(time_loss + utility_loss + unhelpful_robot_penalty);
-      depth_count = lrint(post_action_timeout);
     }
 
     next_state_base = boost::static_pointer_cast<const utexas_planning::State>(next_state);
@@ -404,7 +408,7 @@ namespace utexas_guidance {
     actions.push_back(Action::Ptr(new Action(WAIT)));
   }
 
-  utexas_planning::State::ConstPtr GuidanceModel::getStartState(long seed) const {
+  utexas_planning::State::ConstPtr GuidanceModel::getStartState(long seed) {
     State::Ptr state(new State);
     RNG rng(seed);
 
@@ -453,6 +457,8 @@ namespace utexas_guidance {
       }
     } else {
       state->requests.resize(params_.initial_num_requests);
+      params_.start_idxs = "";
+      params_.goal_idxs = "";
       for (unsigned int i = 0; i < state->requests.size(); ++i) {
         // Make sure that this request doesn't start at the same location as another request.
         while (true) {
@@ -473,16 +479,28 @@ namespace utexas_guidance {
         while (state->requests[i].goal == state->requests[i].loc_node) {
           state->requests[i].goal = rng.randomInt(num_vertices_ - 1);
         }
+
+        params_.start_idxs += boost::lexical_cast<std::string>(state->requests[i].loc_node);
+        params_.goal_idxs += boost::lexical_cast<std::string>(state->requests[i].goal);
+        if (i != state->requests.size() - 1) {
+          params_.start_idxs += ",";
+          params_.goal_idxs += ",";
+        }
       }
     }
 
+    params_.normalizer = 0.0f;
     for (unsigned int i = 0; i < state->requests.size(); ++i) {
       state->requests[i].request_id = generateNewRequestId();
       state->requests[i].loc_prev = state->requests[i].loc_node;
       state->requests[i].loc_p = 1.0f;
       state->requests[i].assist_type = NONE;
       state->requests[i].assist_loc = NONE;
+      params_.normalizer += 
+        shortest_distances_[state->requests[i].loc_node][state->requests[i].goal] / params_.human_speed;
     }
+
+
 
     // for (unsigned int i = 0; i < state->requests.size(); ++i) {
     //   for (unsigned int robot_idx = 0; robot_idx < state->robots.size(); ++robot_idx) {
@@ -519,7 +537,7 @@ namespace utexas_guidance {
     return task_generation_model_;
   }
 
-  std::map<std::string, std::string> getParamsAsMap() const {
+  std::map<std::string, std::string> GuidanceModel::getParamsAsMap() const {
     return params_.asMap();
   }
 
@@ -527,6 +545,9 @@ namespace utexas_guidance {
     RewardMetrics::Ptr metric(new RewardMetrics);
     metric->utility_loss = 0.0f;
     metric->time_loss = 0.0f;
+    metric->reward_normalized = 0.0f;
+    metric->utility_loss_normalized = 0.0f;
+    metric->time_loss_normalized = 0.0f;
     return metric;
   }
 } /* utexas_guidance */

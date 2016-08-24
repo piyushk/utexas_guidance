@@ -6,6 +6,7 @@
 
 #include <utexas_guidance/graph/graph.h>
 #include <utexas_planning/core/action.h>
+#include <utexas_planning/core/reward_metrics.h>
 #include <utexas_planning/core/state.h>
 
 namespace utexas_guidance {
@@ -153,6 +154,9 @@ namespace utexas_guidance {
 
       float utility_loss;
       float time_loss;
+      float reward_normalized;
+      float utility_loss_normalized;
+      float time_loss_normalized;
 
       virtual std::map<std::string, std::string> asMap() const;
   };

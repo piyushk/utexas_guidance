@@ -43,6 +43,7 @@ namespace utexas_guidance {
       _(bool,h2_only_allow_adjacent_assignment,h2_only_allow_adjacent_assignment,false) \
       _(bool,h3_force_assistance,h3_force_assistance,false) \
       _(float,h4_unhelpful_robot_penalty,h4_unhelpful_robot_penalty,0.0f) \
+      _(float,normalizer,normalizer,1.0f) \
 
       Params_STRUCT(PARAMS)
 #undef PARAMS
@@ -74,7 +75,7 @@ namespace utexas_guidance {
       virtual void getActionsAtState(const utexas_planning::State::ConstPtr& state,
                                      std::vector<utexas_planning::Action::ConstPtr>& actions) const;
 
-      virtual utexas_planning::State::ConstPtr getStartState(long seed) const;
+      virtual utexas_planning::State::ConstPtr getStartState(long seed);
 
       virtual float getInitialTimeout() const;
 
