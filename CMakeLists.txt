@@ -115,7 +115,7 @@ install(
   TARGETS
     graph
     mdp
-    main
+    ## main
   ARCHIVE DESTINATION bin
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
