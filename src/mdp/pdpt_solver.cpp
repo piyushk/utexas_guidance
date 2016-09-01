@@ -185,7 +185,7 @@ namespace utexas_guidance {
       const RequestState& request = state.requests[request_id];
 
       // Can't do anything for this request.
-      if (request.loc_p != 1.0f && lead_robot[request_id] != NONE) {
+      if (request.loc_p != 1.0f || lead_robot[request_id] == NONE) {
         continue;
       }
 
@@ -341,8 +341,8 @@ namespace utexas_guidance {
           //   action->serialize(std::cout);
           //   std::cout << std::endl; 
           // }
-          
-          /* std::cout << "  computing reward for robot " << robot_id << std::endl; */
+          // 
+          // std::cout << "  computing reward for robot " << robot_id << std::endl;
 
           std::vector<Action::Ptr> actions_till_first_wait_temp;
           float reward = getRewardFromTrajectory(start_state, actions, actions_till_first_wait_temp);

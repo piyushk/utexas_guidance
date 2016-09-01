@@ -10,9 +10,9 @@ models:
     h4_unhelpful_robot_penalty: 5.0
 planners:
   - name: utexas_guidance::SingleRobotSolver
-  - name: utexas_guidance::PDPTSolver
-  - name: utexas_planning::MCTS
-    default_policy: utexas_guidance::SingleRobotSolver
-    max_depth: 500
-    uct_reward_bound: 500
-    backup_lambda_value: 0.0
+  # - name: utexas_guidance::PDPTSolver
+  # - name: utexas_planning::MCTS
+  #   default_policy: utexas_guidance::SingleRobotSolver
+  #   max_depth: 500
+  #   uct_reward_bound: 500
+  #   backup_lambda_value: 0.0
