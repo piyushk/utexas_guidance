@@ -11,13 +11,13 @@ planners:
     alias: PDPT
   - name: utexas_planning::MCTS
     default_policy: utexas_guidance::SingleRobotSolver
-    max_depth: 300
+    max_depth: 150
     uct_reward_bound: 500
     backup_lambda_value: 0.0
     model: 
       is_deterministic: true
       name: utexas_guidance::GuidanceModel
-      initial_num_requests: 1
+      initial_num_requests: 2
       graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/graph.yaml
       task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/fixed_tasks.yaml
       task_utility: 0.0
@@ -28,12 +28,12 @@ planners:
     alias: MCTS(D)
   - name: utexas_planning::MCTS
     default_policy: utexas_guidance::SingleRobotSolver
-    max_depth: 300
+    max_depth: 150
     uct_reward_bound: 500
     backup_lambda_value: 0.0
     model: 
       name: utexas_guidance::GuidanceModel
-      initial_num_requests: 1
+      initial_num_requests: 2
       graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/graph.yaml
       task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/fixed_tasks.yaml
       task_utility: 0.0

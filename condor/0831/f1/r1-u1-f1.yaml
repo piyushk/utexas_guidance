@@ -11,7 +11,7 @@ planners:
     alias: PDPT
   - name: utexas_planning::MCTS
     default_policy: utexas_guidance::SingleRobotSolver
-    max_depth: 300
+    max_depth: 150
     uct_reward_bound: 500
     backup_lambda_value: 0.0
     model: 
@@ -28,7 +28,7 @@ planners:
     alias: MCTS(D)
   - name: utexas_planning::MCTS
     default_policy: utexas_guidance::SingleRobotSolver
-    max_depth: 300
+    max_depth: 150
     uct_reward_bound: 500
     backup_lambda_value: 0.0
     model: 
