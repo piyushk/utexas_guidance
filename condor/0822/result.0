@@ -1,2 +1,0 @@
-action_selection_strategy,backup_gamma_max_depth,backup_lambda_value,backup_strategy,default_policy,gamma,max_depth,max_new_states_per_rollout,max_playouts,max_trial_depth,mean_initial_random_trials,model_name,planner_name,reward,terminal,thompson_beta_max_reward,thompson_beta_min_reward,thompson_initial_random_trials,time,uct_reward_bound,unknown_action_value
-uct,100,0,backup_lambda_q,utexas_guidance::SingleRobotSolver,1,750,0,-1,-1,5,GuidanceModel,MCTS,-60.7209396,1,100,-100,5,41360,500,-1e+10
