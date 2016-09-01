@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.6)
-project(utexas_planning)
+project(utexas_guidance)
 
 ## find_package(Qt4 REQUIRED)
 ## SET(QT_USE_QTXML 1)
@@ -120,3 +120,26 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
+
+install(DIRECTORY include/ DESTINATION include)
+
+# Setup pkg-config for this package.
+
+set(TARGET_NAME ${PROJECT_NAME})
+set(PKGCONFIG_LIBS
+  ${Boost_LIBRARIES}
+  ${YAML_CPP_LIBRARY}
+  ${CLASS_LOADER_LIBRARIES}
+  ${UTEXAS_PLANNING_LIBRARIES}
+)
+set(PKGCONFIG_LIB_TARGETS
+  "-lgraph"
+  "-lmdp"
+)
+
+# Prepare and install necessary files to support finding of the library
+# using pkg-config
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pkgconfig/${TARGET_NAME}.pc.in
+${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.pc @ONLY)
+
+install(FILES ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.pc DESTINATION lib/pkgconfig)
