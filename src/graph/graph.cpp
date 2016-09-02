@@ -4,7 +4,7 @@
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/foreach.hpp>
 
-/* #include <GL/freeglut.h> */
+#include <GL/freeglut.h>
 
 #include <utexas_guidance/graph/graph.h>
 #include <utexas_guidance/common.h>
@@ -20,42 +20,42 @@ namespace utexas_guidance {
             float vertexcolor_b,
             bool put_all_edges,
             std::vector<std::pair<int, int> > specific_edges) {
-// 
-//     glPushAttrib(GL_CURRENT_BIT);
-// 
-//     Graph::vertex_iterator vi, vend;
-//     int count = 0;
-//     for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi, ++count) {
-//       Point3f location = graph[*vi].location;
-//       // Draw the edges from this vertex
-//       std::vector<int> adj_vertices;
-//       getAdjacentVertices(count, graph, adj_vertices);
-//       BOOST_FOREACH(int adj_vtx, adj_vertices) {
-//         if (adj_vtx > count) {
-//           bool allow_edge = put_all_edges;
-//           allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
-//                                                std::make_pair(count, adj_vtx)) != specific_edges.end();
-//           allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
-//                                                std::make_pair(adj_vtx, count)) != specific_edges.end();
-//           if (allow_edge) {
-//             Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
-//             glColor3f(linecolor_r, linecolor_g, linecolor_b);
-//             drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b);
-//           }
-//         }
-//       }
-//     }
-// 
-//     for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi) {
-//       Point3f location = graph[*vi].location;
-//       glPushMatrix();
-//       glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
-//       glTranslatef(location.get<0>(), location.get<1>(), location.get<2>());
-//       glutSolidSphere(0.2f, 10, 10);
-//       glPopMatrix();
-//     }
-// 
-//     glPopAttrib();
+
+    glPushAttrib(GL_CURRENT_BIT);
+
+    Graph::vertex_iterator vi, vend;
+    int count = 0;
+    for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi, ++count) {
+      Point3f location = graph[*vi].location;
+      // Draw the edges from this vertex
+      std::vector<int> adj_vertices;
+      getAdjacentVertices(count, graph, adj_vertices);
+      BOOST_FOREACH(int adj_vtx, adj_vertices) {
+        if (adj_vtx > count) {
+          bool allow_edge = put_all_edges;
+          allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
+                                               std::make_pair(count, adj_vtx)) != specific_edges.end();
+          allow_edge = allow_edge || std::find(specific_edges.begin(), specific_edges.end(),
+                                               std::make_pair(adj_vtx, count)) != specific_edges.end();
+          if (allow_edge) {
+            Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
+            glColor3f(linecolor_r, linecolor_g, linecolor_b);
+            drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b);
+          }
+        }
+      }
+    }
+
+    for (boost::tie(vi, vend) = boost::vertices(graph); vi != vend; ++vi) {
+      Point3f location = graph[*vi].location;
+      glPushMatrix();
+      glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
+      glTranslatef(location.get<0>(), location.get<1>(), location.get<2>());
+      glutSolidSphere(0.2f, 10, 10);
+      glPopMatrix();
+    }
+
+    glPopAttrib();
 
   }
 

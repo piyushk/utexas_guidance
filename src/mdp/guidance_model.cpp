@@ -16,6 +16,7 @@
 #include <utexas_guidance/exceptions.h>
 #include <utexas_guidance/mdp/common.h>
 #include <utexas_guidance/mdp/guidance_model.h>
+#include <utexas_guidance/mdp/visualizer.h>
 
 #include <utexas_planning/common/exceptions.h>
 
@@ -519,10 +520,10 @@ namespace utexas_guidance {
   }
 
   void GuidanceModel::initializeVisualizer(const utexas_planning::Visualizer::Ptr& visualizer_base) const {
-    // Visualizer::Ptr visualizer = boost::dynamic_pointer_cast<Visualizer>(visualizer_base);
-    // if (visualizer) {
-    //   visualizer->initializeModel(graph_, motion_model_, human_decision_model_, task_generation_model_);
-    // } /* else do nothing, incompatible visualizer. shouldn't throw an error. */
+    Visualizer::Ptr visualizer = boost::dynamic_pointer_cast<Visualizer>(visualizer_base);
+    if (visualizer) {
+      visualizer->initializeModel(graph_, motion_model_, human_decision_model_, task_generation_model_);
+    } /* else do nothing, incompatible visualizer. shouldn't throw an error. */
   }
 
   void GuidanceModel::getUnderlyingGraph(Graph& graph) const {

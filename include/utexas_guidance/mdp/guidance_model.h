@@ -3,7 +3,6 @@
 
 #include <utexas_guidance/mdp/structures.h>
 #include <utexas_guidance/mdp/transition_model.h>
-/* #include <utexas_guidance/mdp/visualizer.h> */
 #include <utexas_guidance/graph/graph.h>
 
 #include <utexas_planning/common/params.h>
