@@ -57,7 +57,7 @@ add_definitions(${GLUT_DEFINITIONS})
 
 include_directories(include)
 
-add_library(graph
+add_library(graph SHARED
   src/graph/graph.cpp
 )
 target_link_libraries(graph
@@ -69,7 +69,7 @@ target_link_libraries(graph
   ${GLUT_LIBRARY}
 )
 
-add_library(mdp
+add_library(mdp SHARED
   src/mdp/common.cpp
   #src/mdp/extended_structures.cpp
   src/mdp/guidance_model.cpp
@@ -116,7 +116,7 @@ install(
     graph
     graph_viewer
     mdp
-  ARCHIVE DESTINATION bin
+    ##  ARCHIVE DESTINATION bin
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION bin
 )
