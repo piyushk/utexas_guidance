@@ -102,6 +102,7 @@ namespace utexas_guidance {
     int goal;
 
     bool is_new_request;
+    float wait_time_left;
 
   };
 
