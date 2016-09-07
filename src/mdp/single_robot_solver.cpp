@@ -44,7 +44,11 @@ namespace utexas_guidance {
   }
 
   void SingleRobotSolver::performEpisodeStartProcessing(const utexas_planning::State::ConstPtr& start_state, 
-                                                        float timeout) {}
+                                                        float timeout) {
+    if (params_.sleep_for_timeout) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f));
+    }
+  }
 
   utexas_planning::Action::ConstPtr SingleRobotSolver::getBestAction(const utexas_planning::State::ConstPtr& state_base) const {
   
