@@ -338,17 +338,22 @@ namespace utexas_guidance {
       // Atleast one of the following should be 1, but no real need to check that.
       if (rs.loc_p > 1.0f - 1e-6f) {
         rs.loc_p = 1.0f;
-        if (rs.assist_type == LEAD_PERSON && rs.wait_time_left == 0.0f) {// && requestComplete(rs)) {
-          // Find robot that helped this person.
-          for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
-            RobotState& robot = state.robots[robot_id];
-            if (robot.is_leading_person && robot.help_destination == rs.loc_node) {
-              robot_release_candidate.push_back(robot_id);
+        if (rs.assist_type == LEAD_PERSON) {
+          if (rs.wait_time_left == 0.0f) {// && requestComplete(rs)) {
+            // Find robot that helped this person.
+            for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+              RobotState& robot = state.robots[robot_id];
+              if (robot.is_leading_person && robot.help_destination == rs.loc_node) {
+                robot_release_candidate.push_back(robot_id);
+              }
             }
+            rs.assist_type = NONE;
+            rs.assist_loc = NONE;
           }
+        } else {
+          rs.assist_type = NONE;
+          rs.assist_loc = NONE;
         }
-        rs.assist_type = NONE;
-        rs.assist_loc = NONE;
       }
     }
 
@@ -460,12 +465,10 @@ namespace utexas_guidance {
       }
 
       // If a robot is exactly at his help destination, remove specific request_id allocation.
-      if (robot_in_use && isRobotExactlyAt(robot, destination)) {
+      if (std::find(robot_release_candidate.begin(), robot_release_candidate.end(), robot_id) !=
+          robot_release_candidate.end()) {
         robot.is_leading_person = false;
-        if (std::find(robot_release_candidate.begin(), robot_release_candidate.end(), robot_id) !=
-            robot_release_candidate.end()) {
-          robot.help_destination = NONE;
-        }
+        robot.help_destination = NONE;
       }
     }
 

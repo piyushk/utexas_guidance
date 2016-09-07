@@ -1,6 +1,6 @@
 models:
   - name: utexas_guidance::GuidanceModel
-    initial_num_requests: 1
+    initial_num_requests: 2
     initial_planning_time: 0.0
     graph_file: /home/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/graph_two_floors.yaml
     task_model_file: /home/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/fixed_tasks.yaml
