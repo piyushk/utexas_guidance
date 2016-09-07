@@ -38,6 +38,7 @@ namespace utexas_guidance {
       _(float,elevator_human_speed,elevator_human_speed,1.0f) \
       _(float,elevator_robot_speed,elevator_robot_speed,0.5f) \
       _(float,initial_planning_time,initial_planning_time,10.0f) \
+      _(bool,h0_wait_for_new_request,h0_wait_for_new_request,false) \
       _(int,h1_max_assigned_robots,h1_max_assigned_robots,MAX_ASSIGNED_ROBOTS_NOLIMIT) \
       _(bool,h2_only_allow_adjacent_assignment,h2_only_allow_adjacent_assignment,false) \
       _(bool,h3_force_assistance,h3_force_assistance,false) \

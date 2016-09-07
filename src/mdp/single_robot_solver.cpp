@@ -1,3 +1,6 @@
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/thread/thread.hpp> 
+
 #include <class_loader/class_loader.h>
 
 #include <utexas_guidance/mdp/guidance_model.h>
@@ -28,6 +31,7 @@ namespace utexas_guidance {
                                const boost::shared_ptr<RNG>& rng,
                                bool verbose) {
 
+    params_.fromYaml(params);
     model_ = boost::dynamic_pointer_cast<const GuidanceModel>(model_base);
     if (!model_) {
       throw utexas_planning::DowncastException("utexas_planning::GenerativeModel", 
@@ -58,19 +62,14 @@ namespace utexas_guidance {
         throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
       }
       if (action->type == LEAD_PERSON) {
-        // // TODO parametrize this part.
-        // if (state->requests[action->request_id].loc_node ==
-        //     state->robots[action->robot_id].tau_d) {
-        //   if (action->node == state->requests[action->request_id].loc_node) {
-        //     return actions[i];
-        //   }
-        // } else {
-          int next_node = 
-            shortest_paths_[state->requests[action->request_id].loc_node][state->requests[action->request_id].goal][0];
-          if (action->node == next_node) {
-            return actions[i];
-          }
-        /* } */
+        int next_node = 
+          shortest_paths_[state->requests[action->request_id].loc_node][state->requests[action->request_id].goal][0];
+        if (params_.h0_wait_for_new_request && state->requests[action->request_id].is_new_request) {
+          next_node = state->requests[action->request_id].loc_node;
+        }
+        if (action->node == next_node) {
+          return actions[i];
+        }
       }
     }
 
@@ -81,13 +80,17 @@ namespace utexas_guidance {
   void SingleRobotSolver::performPreActionProcessing(const utexas_planning::State::ConstPtr& state,
                                                      const utexas_planning::Action::ConstPtr& prev_action,
                                                      float timeout) {
-    /* boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f)); */
+    if (params_.sleep_for_timeout) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f));
+    }
   }
 
   void SingleRobotSolver::performPostActionProcessing(const utexas_planning::State::ConstPtr& state,
                                                       const utexas_planning::Action::ConstPtr& action,
                                                       float timeout) {
-    /* boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f)); */
+    if (params_.sleep_for_timeout) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(timeout * 1000.0f));
+    }
   }
 
   std::string SingleRobotSolver::getName() const {

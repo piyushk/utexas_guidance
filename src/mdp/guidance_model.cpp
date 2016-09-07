@@ -138,8 +138,10 @@ namespace utexas_guidance {
       motion_model_->move(*next_state, human_decision_model_, task_generation_model_, *rng, post_action_timeout);
       float time_loss = state->requests.size() * post_action_timeout;
 
-      // TODO: for requests that finished, and the person was led to the goal, do an implicit release of the robot.
-      
+      for (unsigned int i = 0; i < next_state->requests.size(); ++i) {
+        next_state->requests[i].is_new_request = false;
+      }
+
       if (isTerminalState(next_state)) {
         // Penalize for any assigned robots.
         for(unsigned int i = 0; i < next_state->robots.size(); ++i) {
@@ -150,7 +152,6 @@ namespace utexas_guidance {
         }
       }
 
-      // TODO move these to part of RewardMetrics
       float utility_loss = 0.0f;
       for(unsigned int i = 0; i < next_state->robots.size(); ++i) {
         const RobotState& orig_robot = state->robots[i];
@@ -285,8 +286,6 @@ namespace utexas_guidance {
     }
 
     // DIRECT_PERSON or LEAD_PERSON
-    // TODO: Outside loop should be requests, not robots, just in case multiple robots are
-    // present at the same location.
     bool direct_action_available = false;
     if (last_action.type == WAIT || last_action.type == RELEASE_ROBOT || 
         last_action.type == DIRECT_PERSON || last_action.type == LEAD_PERSON) {
@@ -305,19 +304,20 @@ namespace utexas_guidance {
             if (exact_loc == state->requests[request_id].loc_node) {
 
               direct_action_available = true;
-              // DIRECT_PERSON
-              actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size());
-              for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
-                actions[action_counter] =
-                  Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[exact_loc][adj], request_id));
-                ++action_counter;
-              }
-
+              
               // LEAD_PERSON
               if (assignable_robot_ids[robot_id] &&
                   (state->robots[robot_id].help_destination != NONE ||
                    max_assigned_robots > 0)) {
-                actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size() + 1);
+
+                actions.push_back(Action::Ptr(new Action(LEAD_PERSON, robot_id, exact_loc, request_id)));
+                ++action_counter;
+
+                if (params_.h0_wait_for_new_request && state->requests[request_id].is_new_request) {
+                  return;
+                }
+
+                actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size());
                 for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
                   actions[action_counter] =
                     Action::Ptr(new Action(LEAD_PERSON, 
@@ -328,7 +328,13 @@ namespace utexas_guidance {
                                            ));
                   ++action_counter;
                 }
-                actions[action_counter] = Action::Ptr(new Action(LEAD_PERSON, robot_id, exact_loc, request_id));
+              }
+
+              // DIRECT_PERSON
+              actions.resize(action_counter + adjacent_vertices_map_[exact_loc].size());
+              for (unsigned int adj = 0; adj < adjacent_vertices_map_[exact_loc].size(); ++adj) {
+                actions[action_counter] =
+                  Action::Ptr(new Action(DIRECT_PERSON, robot_id, adjacent_vertices_map_[exact_loc][adj], request_id));
                 ++action_counter;
               }
 
@@ -492,6 +498,7 @@ namespace utexas_guidance {
 
     params_.normalizer = 0.0f;
     for (unsigned int i = 0; i < state->requests.size(); ++i) {
+      state->requests[i].is_new_request = true;
       state->requests[i].request_id = generateNewRequestId();
       state->requests[i].loc_prev = state->requests[i].loc_node;
       state->requests[i].loc_p = 1.0f;

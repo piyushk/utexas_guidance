@@ -13,6 +13,13 @@ namespace utexas_guidance {
 
     public:
 
+#define PARAMS(_) \
+      _(bool,h0_wait_for_new_request,h0_wait_for_new_request,false) \
+      _(bool,sleep_for_timeout,sleep_for_timeout,false) \
+
+      Params_STRUCT(PARAMS)
+#undef PARAMS
+
       typedef boost::shared_ptr<SingleRobotSolver> Ptr;
       typedef boost::shared_ptr<const SingleRobotSolver> ConstPtr;
 
@@ -38,6 +45,8 @@ namespace utexas_guidance {
                                                float timeout = utexas_planning::NO_TIMEOUT);
 
       virtual std::string getName() const;
+
+      Params params_;
 
     private:
 

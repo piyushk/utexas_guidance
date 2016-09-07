@@ -101,6 +101,8 @@ namespace utexas_guidance {
 
     int goal;
 
+    bool is_new_request;
+
   };
 
   bool operator==(const RequestState& l, const RequestState& r);

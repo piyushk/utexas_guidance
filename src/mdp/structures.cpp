@@ -146,6 +146,7 @@ namespace utexas_guidance {
     COMPARE(assist_type);
     COMPARE(assist_loc);
     COMPARE(goal);
+    COMPARE(is_new_request);
     return false;
   }
 
@@ -156,7 +157,8 @@ namespace utexas_guidance {
             (l.loc_p == r.loc_p) &&
             (l.assist_type == r.assist_type) &&
             (l.assist_loc == r.assist_loc) &&
-            (l.goal == r.goal));
+            (l.goal == r.goal) &&
+            (l.is_new_request == r.is_new_request));
   }
 
   bool operator>(const RequestState& l, const RequestState& r) {
@@ -178,6 +180,7 @@ namespace utexas_guidance {
     boost::hash_combine(seed, rs.assist_type);
     boost::hash_combine(seed, rs.assist_loc);
     boost::hash_combine(seed, rs.goal);
+    boost::hash_combine(seed, rs.is_new_request);
     return seed;
   }
 
