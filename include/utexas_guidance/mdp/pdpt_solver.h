@@ -1,5 +1,5 @@
-#ifndef UTEXAS_GUIDANCE_MDP_SINGLE_ROBOT_SOLVER
-#define UTEXAS_GUIDANCE_MDP_SINGLE_ROBOT_SOLVER
+#ifndef UTEXAS_GUIDANCE_MDP_PDPT_SOLVER
+#define UTEXAS_GUIDANCE_MDP_PDPT_SOLVER
 
 #include <utexas_guidance/mdp/structures.h>
 #include <utexas_guidance/graph/graph.h>
@@ -59,4 +59,4 @@ namespace utexas_guidance {
 
 } /* utexas_guidance */
 
-#endif /* end of include guard: UTEXAS_GUIDANCE_MDP_SINGLE_ROBOT_SOLVER */
+#endif /* end of include guard: UTEXAS_GUIDANCE_MDP_PDPT_SOLVER */
