@@ -110,6 +110,9 @@ namespace utexas_guidance {
         if (action->type == LEAD_PERSON) {
           next_state->robots[action->robot_id].help_destination = action->node;
           next_state->robots[action->robot_id].is_leading_person = true;
+          if (isRobotExactlyAt(next_state->robots[action->robot_id], action->node)) {
+            next_state->requests[action->request_id].wait_time_left = 10.0f;
+          }
         }
       }
       next_state->actions_since_wait.push_back(*action);
@@ -301,7 +304,8 @@ namespace utexas_guidance {
             float loc_p = state->robots[robot_id].loc_p;
             int exact_loc = (loc_p == 0.0f) ? state->robots[robot_id].loc_u :
               (loc_p == 1.0f) ? state->robots[robot_id].loc_v : NONE;
-            if (exact_loc == state->requests[request_id].loc_node) {
+            if (state->requests[request_id].wait_time_left == 0.0f &&
+                exact_loc == state->requests[request_id].loc_node) {
 
               direct_action_available = true;
               

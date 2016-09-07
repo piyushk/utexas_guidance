@@ -147,6 +147,7 @@ namespace utexas_guidance {
     COMPARE(assist_loc);
     COMPARE(goal);
     COMPARE(is_new_request);
+    COMPARE(wait_time_left);
     return false;
   }
 
@@ -158,7 +159,8 @@ namespace utexas_guidance {
             (l.assist_type == r.assist_type) &&
             (l.assist_loc == r.assist_loc) &&
             (l.goal == r.goal) &&
-            (l.is_new_request == r.is_new_request));
+            (l.is_new_request == r.is_new_request) &&
+            (l.wait_time_left == r.wait_time_left));
   }
 
   bool operator>(const RequestState& l, const RequestState& r) {
@@ -167,7 +169,7 @@ namespace utexas_guidance {
 
   std::ostream& operator<<(std::ostream& stream, const RequestState& rs) {
     stream << "(<" << rs.loc_prev << "->" << rs.loc_node << ","  << rs.loc_p << ">, " <<
-      "<"  << rs.assist_type << "," << rs.assist_loc << ">, " << rs.goal << ")";
+      "<"  << rs.assist_type << "," << rs.assist_loc << ">, " << rs.goal << ", " << rs.wait_time_left << ")";
     return stream;
   }
 
@@ -181,6 +183,7 @@ namespace utexas_guidance {
     boost::hash_combine(seed, rs.assist_loc);
     boost::hash_combine(seed, rs.goal);
     boost::hash_combine(seed, rs.is_new_request);
+    boost::hash_combine(seed, rs.wait_time_left);
     return seed;
   }
 

@@ -308,7 +308,7 @@ namespace utexas_guidance {
 
       float time_to_dest = (1.0f - rs.loc_p) * shortest_distances_[rs.loc_prev][rs.loc_node] / human_speeds[request_id];
       if (rs.assist_type == LEAD_PERSON && rs.loc_p == 1.0f && rs.loc_node == rs.assist_loc) {
-        time_to_dest = 10.0f;
+        time_to_dest = rs.wait_time_left;
       }
 
       // std::cout << shortest_distances_[rs.loc_prev][rs.loc_node] << std::endl;
@@ -328,12 +328,17 @@ namespace utexas_guidance {
       if (rs.loc_prev != rs.loc_node) {
         float distance_covered = total_time * human_speeds[request_id];
         rs.loc_p += distance_covered / shortest_distances_[rs.loc_prev][rs.loc_node]; // Should be atmost 1.
+      } else {
+        rs.wait_time_left -= total_time;
+        if (rs.wait_time_left < 1e-6f) {
+          rs.wait_time_left = 0.0f;
+        }
       }
 
       // Atleast one of the following should be 1, but no real need to check that.
       if (rs.loc_p > 1.0f - 1e-6f) {
         rs.loc_p = 1.0f;
-        if (rs.assist_type == LEAD_PERSON) {// && requestComplete(rs)) {
+        if (rs.assist_type == LEAD_PERSON && rs.wait_time_left == 0.0f) {// && requestComplete(rs)) {
           // Find robot that helped this person.
           for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
             RobotState& robot = state.robots[robot_id];
