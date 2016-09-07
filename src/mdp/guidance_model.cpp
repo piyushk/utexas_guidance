@@ -235,7 +235,7 @@ namespace utexas_guidance {
       throw utexas_planning::DowncastException("utexas_planning::State", "utexas_guidance::State");
     }
 
-    Action last_action;
+    Action last_action(WAIT);
     if (state->actions_since_wait.size() != 0) {
       last_action = state->actions_since_wait.back();
     }
