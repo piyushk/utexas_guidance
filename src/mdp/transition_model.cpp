@@ -257,12 +257,14 @@ namespace utexas_guidance {
                            float avg_human_speed,
                            float avg_robot_speed,
                            float avg_human_elevator_speed,
-                           float avg_robot_elevator_speed) :
+                           float avg_robot_elevator_speed,
+                           bool terminate_with_robot_present) :
       graph_(graph),
       human_speed_(avg_human_speed),
       robot_speed_(avg_robot_speed),
       elevator_human_speed_(avg_human_elevator_speed),
-      elevator_robot_speed_(avg_robot_elevator_speed) {
+      elevator_robot_speed_(avg_robot_elevator_speed),
+      terminate_with_robot_present_(terminate_with_robot_present) {
     getAllShortestPaths(shortest_distances_, shortest_paths_, graph_);
   }
 
@@ -356,10 +358,6 @@ namespace utexas_guidance {
         }
       }
     }
-
-    /* Remove all completed requests. If a robot lead the person to the goal, release that robot as well. */
-    state.requests.erase(std::remove_if(state.requests.begin(), state.requests.end(), requestComplete),
-                         state.requests.end());
 
     /* Move all robots using total_time.*/
 
@@ -470,6 +468,27 @@ namespace utexas_guidance {
         robot.is_leading_person = false;
         robot.help_destination = NONE;
       }
+    }
+
+    /* Remove all completed requests. */
+
+    // Requests can only complete if a robot was at the goal as well.
+    if (terminate_with_robot_present_) {
+      for (int request_id = state.requests.size() - 1; request_id >= 0; --request_id) {
+        RequestState& rs = state.requests[request_id];
+        if (rs.loc_node == rs.goal && rs.loc_p == 1.0f) {
+          // state.requests.erase(state.requests.begin() + request_id);
+          for (int robot_id = 0; robot_id < state.robots.size(); ++robot_id) {
+            if (isRobotExactlyAt(state.robots[robot_id], rs.loc_node)) {
+              state.requests.erase(state.requests.begin() + request_id);
+              break;
+            }
+          }
+        }
+      }
+    } else {
+      state.requests.erase(std::remove_if(state.requests.begin(), state.requests.end(), requestComplete),
+                           state.requests.end());
     }
 
   }

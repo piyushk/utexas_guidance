@@ -57,7 +57,8 @@ namespace utexas_guidance {
                                         params_.human_speed,
                                         params_.robot_speed,
                                         params_.elevator_human_speed,
-                                        params_.elevator_robot_speed));
+                                        params_.elevator_robot_speed,
+                                        params_.terminate_with_robot_present));
 
     num_vertices_ = boost::num_vertices(graph_);
     getAllAdjacentVertices(adjacent_vertices_map_, graph_);

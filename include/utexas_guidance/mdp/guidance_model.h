@@ -32,6 +32,7 @@ namespace utexas_guidance {
       _(std::string,start_idxs,start_idxs,"") /* Debugging only. */ \
       _(std::string,goal_idxs,goal_idxs,"") /* Debugging only. */ \
       _(bool,terminate_at_zero_requests,terminate_at_zero_requests,true) \
+      _(bool,terminate_with_robot_present,terminate_with_robot_present,true) \
       _(bool,is_deterministic,is_deterministic,false) \
       _(float,human_speed,human_speed,1.0f) \
       _(float,robot_speed,robot_speed,0.5f) \

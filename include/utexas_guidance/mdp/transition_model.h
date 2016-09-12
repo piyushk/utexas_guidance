@@ -116,7 +116,8 @@ namespace utexas_guidance {
                   float avg_human_speed,
                   float avg_robot_speed,
                   float avg_elevator_human_speed,
-                  float avg_elevator_robot_speed);
+                  float avg_elevator_robot_speed,
+                  bool terminate_with_robot_present);
 
       virtual ~MotionModel();
       virtual void move(State &state,
@@ -141,6 +142,7 @@ namespace utexas_guidance {
       float robot_speed_;
       float elevator_human_speed_;
       float elevator_robot_speed_;
+      bool terminate_with_robot_present_;
 
   };
 
