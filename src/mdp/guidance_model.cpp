@@ -33,6 +33,7 @@ namespace utexas_guidance {
                            const boost::shared_ptr<RNG>& rng) {
 
     params_.fromYaml(params);
+    std::cout << params_ << std::endl;
 
     /* Initialize all graphs and models. */
     // TODO Test for graph and task allocation file here.
