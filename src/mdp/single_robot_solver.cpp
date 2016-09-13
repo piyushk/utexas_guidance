@@ -60,6 +60,74 @@ namespace utexas_guidance {
     std::vector<utexas_planning::Action::ConstPtr> actions;
     model_->getActionsAtState(state, actions);
 
+    // See which combination of releasing robots maximizes the solvers ability to lead to the goal.
+    std::vector<std::vector<utexas_planning::Action::ConstPtr> > possible_release_combinations;
+    possible_release_combinations.push_back(std::vector<utexas_planning::Action::ConstPtr>());
+
+    for (int i = 0; i < actions.size(); ++i) {
+      Action::ConstPtr action = boost::dynamic_pointer_cast<const Action>(actions[i]);
+      if (!action) {
+        throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
+      }
+      if (action->type == RELEASE_ROBOT) {
+        int current_max_num_combos = possible_release_combinations.size();
+        for (int j = 0; j < current_max_num_combos; ++j) {
+          std::vector<utexas_planning::Action::ConstPtr> current_combo = possible_release_combinations[j];
+          current_combo.push_back(action);
+          possible_release_combinations.push_back(current_combo);
+        }
+      } else {
+        // All RELEASE actions are bundled first.
+        break;
+      }
+    }
+
+    int max_lead_count = 0;
+    int max_combo_idx = 0;
+    for (int j = 1; j < possible_release_combinations.size(); ++j) {
+      std::vector<utexas_planning::Action::ConstPtr> current_combo = possible_release_combinations[j];
+      utexas_planning::State::ConstPtr current_state = state_base, next_state;
+      for (int action_idx = 0; action_idx < current_combo.size(); ++action_idx) {
+        float unused_reward, unused_timeout;
+        int unused_depth_count;
+        model_->takeAction(current_state, 
+                           current_combo[action_idx],
+                           unused_reward,
+                           utexas_planning::RewardMetrics::Ptr(),
+                           next_state,
+                           unused_depth_count,
+                           unused_timeout,
+                           rng_);
+        current_state = next_state;
+      }
+
+      // Now count the number of LEAD actions available at this state.
+      std::vector<utexas_planning::Action::ConstPtr> current_actions;
+      model_->getActionsAtState(current_state, current_actions);
+
+      int lead_count = 0;
+      for (int i = 0; i < current_actions.size(); ++i) {
+        Action::ConstPtr action = boost::dynamic_pointer_cast<const Action>(current_actions[i]);
+        if (!action) {
+          throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
+        }
+        if (action->type == LEAD_PERSON) {
+          ++lead_count;
+        }
+      }
+      
+      if (lead_count > max_lead_count) {
+        max_combo_idx = j;
+        max_lead_count = lead_count;
+      }
+    }
+
+    if (max_combo_idx != 0) {
+      // std::cout << "returning release combo" << std::endl;
+      return possible_release_combinations[max_combo_idx][0];
+    }
+
+    // See if any robots need to be released so that the human can be lead.
     for (int i = 0; i < actions.size(); ++i) {
       Action::ConstPtr action = boost::dynamic_pointer_cast<const Action>(actions[i]);
       if (!action) {
@@ -77,7 +145,21 @@ namespace utexas_guidance {
       }
     }
 
+    Action::ConstPtr last_action = boost::dynamic_pointer_cast<const Action>(actions.back());
+    if (!last_action) {
+      throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
+    }
+    if (last_action->type != WAIT && 
+        (last_action->type != LEAD_PERSON && !isRobotExactlyAt(state->robots[last_action->robot_id], last_action->node))) {
+      state->serialize(std::cout);
+      std::cout << std::endl;
+      last_action->serialize(std::cout);
+      std::cout << std::endl;
+      throw utexas_planning::IncorrectUsageException("SingleRobotSolver attempted to return last action, but it was not wait.");
+    }
+
     // Return the wait action. Don't take any other actions.
+    // return actions.back();
     return actions.back();
   }
 
