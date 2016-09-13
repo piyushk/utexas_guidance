@@ -145,18 +145,18 @@ namespace utexas_guidance {
       }
     }
 
-    Action::ConstPtr last_action = boost::dynamic_pointer_cast<const Action>(actions.back());
-    if (!last_action) {
-      throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
-    }
-    if (last_action->type != WAIT && 
-        (last_action->type != LEAD_PERSON && !isRobotExactlyAt(state->robots[last_action->robot_id], last_action->node))) {
-      state->serialize(std::cout);
-      std::cout << std::endl;
-      last_action->serialize(std::cout);
-      std::cout << std::endl;
-      throw utexas_planning::IncorrectUsageException("SingleRobotSolver attempted to return last action, but it was not wait.");
-    }
+    // Action::ConstPtr last_action = boost::dynamic_pointer_cast<const Action>(actions.back());
+    // if (!last_action) {
+    //   throw utexas_planning::DowncastException("utexas_planning::Action", "utexas_guidance::Action");
+    // }
+    // if (last_action->type != WAIT && 
+    //     (last_action->type != LEAD_PERSON && !isRobotExactlyAt(state->robots[last_action->robot_id], last_action->node))) {
+    //   state->serialize(std::cout);
+    //   std::cout << std::endl;
+    //   last_action->serialize(std::cout);
+    //   std::cout << std::endl;
+    //   throw utexas_planning::IncorrectUsageException("SingleRobotSolver attempted to return last action, but it was not wait.");
+    // }
 
     // Return the wait action. Don't take any other actions.
     // return actions.back();
