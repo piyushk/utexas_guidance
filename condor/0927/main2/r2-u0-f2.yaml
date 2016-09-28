@@ -1,0 +1,52 @@
+models:
+  - name: utexas_guidance::GuidanceModel
+    initial_num_requests: 2
+    initial_planning_time: 0.0
+    graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/graph_two_floors.yaml
+    task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/fixed_tasks.yaml
+    task_utility: 0.0
+planners:
+  - name: utexas_guidance::SingleRobotSolver
+    alias: SingleRobot
+  - name: utexas_guidance::SingleRobotSolver
+    h0_wait_for_new_request: true
+    alias: SingleRobot-W
+  - name: utexas_guidance::PDPTSolver
+    alias: PDPT
+  - name: utexas_planning::MCTS
+    default_policy: utexas_guidance::SingleRobotSolver
+    max_depth: 300
+    uct_reward_bound: 500
+    backup_lambda_value: 0.0
+    model: 
+      is_deterministic: true
+      name: utexas_guidance::GuidanceModel
+      initial_num_requests: 2
+      initial_planning_time: 0.0
+      graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/graph_two_floors.yaml
+      task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/fixed_tasks.yaml
+      task_utility: 0.0
+      h0_wait_for_new_request: true
+      h1_max_assigned_robots: -2
+      h2_only_allow_adjacent_assignment: true
+      h3_force_assistance: true
+      h4_unhelpful_robot_penalty: 5.0
+    alias: MCTS(D)
+  - name: utexas_planning::MCTS
+    default_policy: utexas_guidance::SingleRobotSolver
+    max_depth: 300
+    uct_reward_bound: 500
+    backup_lambda_value: 0.0
+    model: 
+      name: utexas_guidance::GuidanceModel
+      initial_num_requests: 2
+      initial_planning_time: 0.0
+      graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/graph_two_floors.yaml
+      task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map_two_floors/fixed_tasks.yaml
+      task_utility: 0.0
+      h0_wait_for_new_request: true
+      h1_max_assigned_robots: -2
+      h2_only_allow_adjacent_assignment: true
+      h3_force_assistance: true
+      h4_unhelpful_robot_penalty: 5.0
+    alias: MCTS
