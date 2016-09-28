@@ -510,8 +510,8 @@ namespace utexas_guidance {
       state->requests[i].loc_p = 1.0f;
       state->requests[i].assist_type = NONE;
       state->requests[i].assist_loc = NONE;
-      params_.normalizer += 
-        shortest_distances_[state->requests[i].loc_node][state->requests[i].goal] / params_.human_speed;
+      params_.normalizer = std::max(params_.normalizer, 
+                                    shortest_distances_[state->requests[i].loc_node][state->requests[i].goal] / params_.human_speed);
     }
 
 
