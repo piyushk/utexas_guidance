@@ -9,10 +9,12 @@ namespace utexas_guidance {
 
   HumanDecisionModel::HumanDecisionModel(const Graph& graph, 
                                          bool is_deterministic,
-                                         float decision_variance_multiplier) :
+                                         float decision_variance_multiplier, 
+                                         float decision_mean_noise_multiplier) :
       graph_(graph), 
       is_deterministic_(is_deterministic),
-      decision_variance_multiplier_(decision_variance_multiplier) {
+      decision_variance_multiplier_(decision_variance_multiplier),
+      decision_mean_noise_multiplier_(decision_mean_noise_multiplier) {
     getAllAdjacentVertices(adjacent_vertices_map_, graph_);
     getAllAdjacentVerticesOnSameFloor(adjacent_vertices_on_same_floor_map_, graph_);
   }
@@ -37,7 +39,8 @@ namespace utexas_guidance {
         return state.assist_loc;
       } else {
         expected_variance = 0.05f * decision_variance_multiplier_;
-        expected_direction_of_motion = getNodeAngle(state.loc_node, state.assist_loc, graph_);
+        expected_direction_of_motion = getNodeAngle(state.loc_node, state.assist_loc, graph_) +
+          decision_mean_noise_multiplier_ * rng.normalFloat(0.0f, 1.0f);
       }
     } else /* no assistance provided. */ {
       // Do nothing. Use default values for expected variance.
@@ -66,7 +69,8 @@ namespace utexas_guidance {
         }
         return adjacent_vertices_on_same_floor_map_[state.loc_node][rand_idx];
       } else {
-        expected_direction_of_motion = getNodeAngle(state.loc_prev, state.loc_node, graph_);
+        expected_direction_of_motion = getNodeAngle(state.loc_prev, state.loc_node, graph_) +
+          decision_mean_noise_multiplier_ * rng.normalFloat(0.0f, 1.0f);
         expected_variance = 0.1f * decision_variance_multiplier_;
       }
     }

@@ -40,7 +40,8 @@ namespace utexas_guidance {
     readGraphFromFile(params_.graph_file, graph_);
     human_decision_model_.reset(new HumanDecisionModel(graph_, 
                                                        params_.is_deterministic,
-                                                       params_.human_variance_multiplier));
+                                                       params_.human_variance_multiplier,
+                                                       params_.human_mean_noise_multiplier));
     if (params_.task_model == FIXED_TASK_MODEL) {
       task_generation_model_.reset(new FixedTaskGenerationModel(params_.task_model_file,
                                                                 params_.task_utility,
@@ -315,6 +316,14 @@ namespace utexas_guidance {
               if (assignable_robot_ids[robot_id] &&
                   (state->robots[robot_id].help_destination != NONE ||
                    max_assigned_robots > 0)) {
+
+                if (params_.h0_lead_for_new_request && state->requests[request_id].is_new_request) {
+                  int next_node = 
+                    shortest_paths_[state->requests[request_id].loc_node][state->requests[request_id].goal][0];
+                  actions.push_back(Action::Ptr(new Action(LEAD_PERSON, robot_id, next_node, request_id)));
+                  ++action_counter;
+                  return;
+                }
 
                 actions.push_back(Action::Ptr(new Action(LEAD_PERSON, robot_id, exact_loc, request_id)));
                 ++action_counter;

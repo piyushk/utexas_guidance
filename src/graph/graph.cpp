@@ -40,7 +40,7 @@ namespace utexas_guidance {
           if (allow_edge) {
             Point3f location2 = getLocationFromGraphId(adj_vtx, graph);
             glColor3f(linecolor_r, linecolor_g, linecolor_b);
-            drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b);
+            drawLine(location, location2, linecolor_r, linecolor_g, linecolor_b, 0.25f);
           }
         }
       }
@@ -51,7 +51,7 @@ namespace utexas_guidance {
       glPushMatrix();
       glColor3f(vertexcolor_r, vertexcolor_g, vertexcolor_b);
       glTranslatef(location.get<0>(), location.get<1>(), location.get<2>());
-      glutSolidSphere(0.2f, 10, 10);
+      glutSolidSphere(0.5f, 10, 10);
       glPopMatrix();
     }
 

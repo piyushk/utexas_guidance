@@ -15,7 +15,7 @@ class GraphViewer : public QGLViewer {
 // Draws a spiral
 void GraphViewer::draw() {
   glPushMatrix();
-  glScalef(0.05f, 0.05f, 0.05f);
+  glScalef(0.01f, 0.01f, 0.01f);
   utexas_guidance::draw(graph_);
   glPopMatrix();
 }

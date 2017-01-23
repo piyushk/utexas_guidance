@@ -20,7 +20,8 @@ namespace utexas_guidance {
 
       HumanDecisionModel(const utexas_guidance::Graph& graph, 
                          bool is_deterministic = false,
-                         float decision_variance_multiplier = 1.0f);
+                         float decision_variance_multiplier = 1.0f,
+                         float decision_mean_noise_multiplier = 0.0f);
       virtual ~HumanDecisionModel();
 
       virtual int getNextNode(const RequestState& state, RNG &rng) const;
@@ -30,6 +31,7 @@ namespace utexas_guidance {
       utexas_guidance::Graph graph_;
       bool is_deterministic_;
       float decision_variance_multiplier_;
+      float decision_mean_noise_multiplier_;
 
       std::vector<std::vector<int> > adjacent_vertices_map_;
       std::vector<std::vector<int> > adjacent_vertices_on_same_floor_map_;
