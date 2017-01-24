@@ -10,7 +10,7 @@ planners:
   - name: utexas_guidance::SingleRobotSolver
     alias: SingleRobot
   - name: utexas_guidance::SingleRobotSolver
-    h0_wait_for_new_request: true
+    h0_lead_for_new_request: true
     alias: SingleRobot-W
   - name: utexas_planning::MCTS
     default_policy: utexas_guidance::SingleRobotSolver
@@ -25,7 +25,7 @@ planners:
       graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/graph.yaml
       task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/fixed_tasks.yaml
       task_utility: 0.0
-      h0_wait_for_new_request: true
+      h0_lead_for_new_request: true
       h1_max_assigned_robots: -2
       h2_only_allow_adjacent_assignment: true
       h3_force_assistance: true
@@ -44,7 +44,7 @@ planners:
       graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/graph.yaml
       task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/fixed_tasks.yaml
       task_utility: 0.0
-      h0_wait_for_new_request: true
+      h0_lead_for_new_request: true
       h1_max_assigned_robots: -2
       h2_only_allow_adjacent_assignment: true
       h3_force_assistance: true
