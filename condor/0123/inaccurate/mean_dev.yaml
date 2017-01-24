@@ -5,7 +5,7 @@ models:
     graph_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/graph.yaml
     task_model_file: /u/piyushk/utexas_planning/utexas_guidance/map_config/map/fixed_tasks.yaml
     task_utility: 1.0
-    human_mean_noise_multipler: 0.05
+    human_mean_noise_multiplier: 0.05
 planners:
   - name: utexas_guidance::SingleRobotSolver
     alias: SingleRobot
