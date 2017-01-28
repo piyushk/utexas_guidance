@@ -17,7 +17,7 @@ planners:
     default_policy: utexas_guidance::SingleRobotSolver
     max_depth: 150
     uct_reward_bound: 500
-    backup_lambda_value: 0.4
+    backup_lambda_value: 0.0
     model: 
       is_deterministic: true
       name: utexas_guidance::GuidanceModel
@@ -54,7 +54,7 @@ planners:
     default_policy: utexas_guidance::SingleRobotSolver
     max_depth: 150
     uct_reward_bound: 500
-    backup_lambda_value: 0.4
+    backup_lambda_value: 0.0
     model: 
       is_deterministic: true
       name: utexas_guidance::GuidanceModel
